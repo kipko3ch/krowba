@@ -257,22 +257,22 @@ export function LinkPageClient({ link }: LinkPageClientProps) {
                                             {selectedMethod === "card" && <Check className="w-3 h-3 text-black" />}
                                         </div>
                                         <div className="flex-1">
-                                            <p className="font-medium">Credit / Debit Card</p>
-                                            <p className="text-xs text-muted-foreground mt-0.5">Pay with Visa, Mastercard, or Verve</p>
+                                            <p className="font-medium">Card</p>
+                                            <p className="text-xs text-muted-foreground mt-0.5">Visa, Mastercard, Verve</p>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            {/* Visa Logo */}
-                                            <div className="w-10 h-6 bg-white border border-border rounded flex items-center justify-center">
-                                                <svg viewBox="0 0 48 32" className="h-4 w-auto">
-                                                    <path fill="#1A1F71" d="M19.5 10.5L16.5 21.5H14L17 10.5H19.5ZM30.5 17.5L32 13.5L33 17.5H30.5ZM34 21.5H36.5L34.5 10.5H32.5C32 10.5 31.5 10.8 31.3 11.3L27 21.5H29.5L30 20H33L33.3 21.5H34ZM26 17C26 14 22 13.8 22 12.5C22 12 22.5 11.5 23.5 11.5C24.3 11.5 25 11.7 25.5 12L26 10.2C25.3 10 24.5 9.8 23.5 9.8C21 9.8 19.3 11 19.3 12.7C19.3 15 22.3 15.3 22.3 16.5C22.3 17 21.7 17.5 20.7 17.5C19.7 17.5 18.7 17.2 18 16.8L17.5 18.7C18.2 19 19.2 19.2 20.2 19.2C23 19.2 24.7 18 24.7 16.2L26 17ZM16 10.5L12 21.5H9.5L7 12.5C7 12 6.7 11.5 6.2 11.3C5.5 11 4.3 10.7 3.2 10.5L3.3 10H7.3C7.8 10 8.3 10.4 8.4 10.9L9.5 17L12 10.5H14.5H16Z" />
+                                            {/* Visa */}
+                                            <div className="h-6 w-10 bg-white border rounded flex items-center justify-center p-1">
+                                                <svg viewBox="0 0 32 10" className="w-full h-full">
+                                                    <path fill="#1434CB" d="M12.7.2L8.6 24.6h4.1l4.1-24.4h-4.1zm18.8 0l-2.6 17.6c-.2.8-1.3 1.6-2.4 1.6h-8.3l-.1-.6L23.4.2h9.1l-1 0zm-14.7 0H12l-2.5 15.6c-.3 1.3-1.8 2.2-3.1 2.2H.4l-.2.9c3.9 1 8.3 1.8 11.9 1.8 4.4 0 7.3-2.1 8.2-6.6L24.6.2h-7.8z" />
                                                 </svg>
                                             </div>
-                                            {/* Mastercard Logo */}
-                                            <div className="w-10 h-6 bg-white border border-border rounded flex items-center justify-center">
-                                                <svg viewBox="0 0 48 32" className="h-4 w-auto">
-                                                    <circle cx="18" cy="16" r="8" fill="#EB001B" />
-                                                    <circle cx="30" cy="16" r="8" fill="#F79E1B" />
-                                                    <path d="M24 10c2 1.5 3.3 4 3.3 6.5S26 21.5 24 23c-2-1.5-3.3-4-3.3-6.5S22 11.5 24 10z" fill="#FF5F00" />
+                                            {/* Mastercard */}
+                                            <div className="h-6 w-10 bg-white border rounded flex items-center justify-center p-1">
+                                                <svg viewBox="0 0 24 18" className="w-full h-full">
+                                                    <circle cx="7" cy="9" r="7" fill="#EB001B" />
+                                                    <circle cx="17" cy="9" r="7" fill="#F79E1B" />
+                                                    <path d="M12 4.5c1.5 1.2 2.5 3 2.5 4.5s-1 3.3-2.5 4.5c-1.5-1.2-2.5-3-2.5-4.5s1-3.3 2.5-4.5z" fill="#FF5F00" />
                                                 </svg>
                                             </div>
                                         </div>
@@ -297,11 +297,10 @@ export function LinkPageClient({ link }: LinkPageClientProps) {
                                         </div>
                                         <div className="flex-1">
                                             <p className="font-medium">M-Pesa</p>
-                                            <p className="text-xs text-muted-foreground mt-0.5">Pay via Safaricom M-Pesa</p>
+                                            <p className="text-xs text-muted-foreground mt-0.5">Pay via Safaricom</p>
                                         </div>
-                                        {/* M-Pesa Logo */}
-                                        <div className="w-16 h-6 bg-[#00A64B] rounded flex items-center justify-center px-2">
-                                            <span className="text-white text-xs font-bold">M-PESA</span>
+                                        <div className="h-6 px-2 bg-[#43B02A] rounded flex items-center justify-center">
+                                            <span className="text-white text-[10px] font-bold tracking-wider">M-PESA</span>
                                         </div>
                                     </button>
 
@@ -324,11 +323,11 @@ export function LinkPageClient({ link }: LinkPageClientProps) {
                                         </div>
                                         <div className="flex-1">
                                             <p className="font-medium">Bank Transfer</p>
-                                            <p className="text-xs text-muted-foreground mt-0.5">Pay directly from your bank account</p>
+                                            <p className="text-xs text-muted-foreground mt-0.5">Direct bank payment</p>
                                         </div>
-                                        <div className="w-10 h-6 bg-muted rounded flex items-center justify-center">
-                                            <svg className="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                        <div className="h-6 w-10 bg-muted rounded flex items-center justify-center">
+                                            <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
                                             </svg>
                                         </div>
                                     </button>

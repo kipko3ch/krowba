@@ -54,7 +54,10 @@ export async function POST(request: NextRequest) {
 
     if (txError) {
       console.error("[Pay] Transaction creation error:", txError)
-      return NextResponse.json({ error: "Failed to create transaction" }, { status: 500 })
+      return NextResponse.json({
+        error: `Failed to create transaction: ${txError.message || JSON.stringify(txError)}`,
+        details: txError
+      }, { status: 500 })
     }
 
     // Callback URL after payment
