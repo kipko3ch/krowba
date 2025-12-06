@@ -1,6 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { createClient } from "@supabase/supabase-js"
 import { paystack } from "@/lib/services/paystack"
+
+// Lazy initialization to avoid build-time errors
+const getSupabaseAdmin = () => createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,7 +14,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
-    const supabase = await createClient()
+    const supabase = getSupabaseAdmin()
 
     // Fetch the Krowba link
     const { data: link, error: linkError } = await supabase

@@ -436,7 +436,7 @@ export function LinkPageClient({ link }: LinkPageClientProps) {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
                     <Link href="/" className="flex items-center gap-2 group">
                         <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                        <span className="font-semibold text-xl group-hover:text-primary transition-colors">krowba</span>
+                        <span className="font-serif-display text-xl tracking-wide group-hover:text-primary transition-colors">krowba</span>
                     </Link>
                     <div className="flex items-center gap-3">
                         <button
@@ -451,7 +451,7 @@ export function LinkPageClient({ link }: LinkPageClientProps) {
                             className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium hover:bg-muted rounded-lg transition-colors"
                         >
                             <User className="w-4 h-4" />
-                            <span className="hidden sm:inline">Login</span>
+                            <span>Login</span>
                         </Link>
                         <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-full">
                             <ShieldCheck className="h-3.5 w-3.5" />
@@ -462,7 +462,10 @@ export function LinkPageClient({ link }: LinkPageClientProps) {
             </nav>
 
             {/* Main Content */}
-            <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+            <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12 relative">
+                {/* Background Blur Effect */}
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-3xl h-96 bg-primary/10 blur-[100px] -z-10 rounded-full pointer-events-none" />
+
                 <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr] lg:grid-cols-[400px_1fr] gap-8 lg:gap-12 items-start">
 
                     {/* Left: Product Image */}
@@ -519,7 +522,7 @@ export function LinkPageClient({ link }: LinkPageClientProps) {
                     <div className="space-y-6">
                         {/* Title & Description */}
                         <div className="space-y-3">
-                            <h1 className="text-2xl sm:text-3xl font-bold leading-tight">
+                            <h1 className="text-3xl sm:text-4xl font-serif-display font-bold leading-tight bg-clip-text text-transparent bg-gradient-to-br from-foreground to-foreground/70">
                                 {link.item_name}
                             </h1>
 
