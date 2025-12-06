@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Shield, ShieldCheck, Lock, Share2, User, Loader2, CreditCard, Smartphone, Building2, Wallet } from "lucide-react"
+import { Shield, ShieldCheck, Lock, Share2, User, Loader2, ArrowLeft, Check } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { CometCard } from "@/components/ui/comet-card"
 import Image from "next/image"
@@ -32,6 +32,9 @@ interface LinkPageClientProps {
     }
 }
 
+// Payment method type
+type PaymentMethod = "card" | "mpesa" | "bank"
+
 export function LinkPageClient({ link }: LinkPageClientProps) {
     const [currentImageIndex, setCurrentImageIndex] = useState(0)
     const [pin, setPin] = useState("")
@@ -39,10 +42,11 @@ export function LinkPageClient({ link }: LinkPageClientProps) {
     const [unlocked, setUnlocked] = useState(!link.access_pin)
 
     // Payment state
-    const [showPaymentForm, setShowPaymentForm] = useState(false)
+    const [showCheckout, setShowCheckout] = useState(false)
     const [buyerName, setBuyerName] = useState("")
     const [buyerEmail, setBuyerEmail] = useState("")
     const [buyerPhone, setBuyerPhone] = useState("")
+    const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>("card")
     const [isProcessing, setIsProcessing] = useState(false)
 
     const totalPrice = link.item_price + link.delivery_fee
@@ -108,26 +112,27 @@ export function LinkPageClient({ link }: LinkPageClientProps) {
         }
     }
 
+    // PIN unlock screen
     if (!unlocked) {
         return (
             <div className="min-h-dvh bg-background flex items-center justify-center p-4">
                 <div className="max-w-sm w-full space-y-6 text-center">
-                    <div className="bg-card border border-border rounded-2xl p-8 shadow-lg space-y-6">
+                    <div className="bg-card border border-border rounded-2xl p-8 shadow-sm space-y-6">
                         <div className="w-16 h-16 mx-auto bg-primary/10 rounded-2xl flex items-center justify-center">
                             <Lock className="h-8 w-8 text-primary" />
                         </div>
                         <div>
-                            <h1 className="text-2xl font-serif-display font-bold">Protected Link</h1>
+                            <h1 className="text-2xl font-bold">Protected Link</h1>
                             <p className="text-sm text-muted-foreground mt-2">Enter the PIN shared by the seller</p>
                         </div>
-                        <input
+                        <Input
                             type="text"
                             value={pin}
                             onChange={(e) => setPin(e.target.value)}
                             placeholder="Enter PIN"
                             className={cn(
-                                "w-full h-14 text-center text-2xl tracking-[0.5em] rounded-xl border bg-background text-foreground placeholder:text-muted-foreground font-mono focus:outline-none focus:ring-2 focus:ring-primary transition-all",
-                                pinError ? "border-destructive animate-shake" : "border-border"
+                                "h-14 text-center text-2xl tracking-widest rounded-xl",
+                                pinError && "border-destructive animate-shake"
                             )}
                         />
                         <Button onClick={handleUnlock} className="w-full h-12 bg-primary hover:bg-primary/90 text-black font-semibold">
@@ -139,94 +144,194 @@ export function LinkPageClient({ link }: LinkPageClientProps) {
         )
     }
 
-    // Payment Form Modal
-    if (showPaymentForm) {
+    // CHECKOUT PAGE - Full page Stripe-style
+    if (showCheckout) {
         return (
-            <div className="min-h-dvh bg-background flex items-center justify-center p-4">
-                <div className="max-w-md w-full">
-                    {/* Payment Card */}
-                    <div className="bg-card border border-border rounded-3xl overflow-hidden shadow-2xl">
-                        {/* Header with gradient */}
-                        <div className="relative bg-gradient-to-br from-primary via-primary/90 to-yellow-500 p-6 text-black">
-                            <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzBoLTZWMGg2djMwem0tNiAwaC02djYwaDZ2LTYweiIvPjwvZz48L2c+PC9zdmc+')] opacity-20" />
-                            <button
-                                onClick={() => setShowPaymentForm(false)}
-                                className="absolute top-4 right-4 p-2 hover:bg-black/10 rounded-full transition-colors"
-                            >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
-                            <div className="relative">
-                                <p className="text-sm font-medium opacity-80">You're paying for</p>
-                                <h2 className="text-xl font-bold mt-1 truncate">{link.item_name}</h2>
-                                <div className="mt-4 flex items-baseline gap-2">
-                                    <span className="text-3xl font-bold">KES {depositAmount?.toLocaleString()}</span>
-                                    {link.escrow_mode === "split_risk" && (
-                                        <span className="text-sm opacity-70">deposit</span>
+            <div className="min-h-dvh bg-zinc-50 dark:bg-zinc-950">
+                {/* Header */}
+                <header className="bg-background border-b border-border sticky top-0 z-50">
+                    <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
+                        <button
+                            onClick={() => setShowCheckout(false)}
+                            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                            <ArrowLeft className="w-4 h-4" />
+                            <span className="hidden sm:inline">Back to product</span>
+                        </button>
+                        <Link href="/" className="flex items-center gap-2">
+                            <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                            <span className="font-semibold text-lg">krowba</span>
+                        </Link>
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <Lock className="w-3 h-3" />
+                            <span className="hidden sm:inline">Secured</span>
+                        </div>
+                    </div>
+                </header>
+
+                {/* Main Content */}
+                <main className="max-w-4xl mx-auto px-4 py-8">
+                    <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-8">
+
+                        {/* Left: Payment Form */}
+                        <div className="space-y-6">
+                            {/* Order Summary - Mobile Only */}
+                            <div className="lg:hidden bg-background border border-border rounded-xl p-4">
+                                <div className="flex items-center gap-4">
+                                    {link.images?.[0] && (
+                                        <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                                            <Image src={link.images[0]} alt="" width={64} height={64} className="object-cover w-full h-full" />
+                                        </div>
                                     )}
+                                    <div className="flex-1 min-w-0">
+                                        <p className="font-medium truncate">{link.item_name}</p>
+                                        <p className="text-lg font-bold text-primary">KES {depositAmount?.toLocaleString()}</p>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        {/* Form */}
-                        <div className="p-6 space-y-5">
-                            <div className="space-y-2">
-                                <Label htmlFor="name" className="text-sm font-medium">Your Name</Label>
-                                <Input
-                                    id="name"
-                                    placeholder="John Doe"
-                                    value={buyerName}
-                                    onChange={(e) => setBuyerName(e.target.value)}
-                                    className="h-12 rounded-xl"
-                                />
+                            {/* Your Details */}
+                            <div className="bg-background border border-border rounded-xl p-6">
+                                <h2 className="text-lg font-semibold mb-5">Your Details</h2>
+
+                                <div className="space-y-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="name" className="text-sm">Full Name</Label>
+                                        <Input
+                                            id="name"
+                                            placeholder="John Doe"
+                                            value={buyerName}
+                                            onChange={(e) => setBuyerName(e.target.value)}
+                                            className="h-12"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="email" className="text-sm">Email Address <span className="text-destructive">*</span></Label>
+                                        <Input
+                                            id="email"
+                                            type="email"
+                                            placeholder="you@example.com"
+                                            value={buyerEmail}
+                                            onChange={(e) => setBuyerEmail(e.target.value)}
+                                            required
+                                            className="h-12"
+                                        />
+                                        <p className="text-xs text-muted-foreground">Payment receipt will be sent here</p>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="phone" className="text-sm">Phone Number</Label>
+                                        <Input
+                                            id="phone"
+                                            type="tel"
+                                            placeholder="+254 7XX XXX XXX"
+                                            value={buyerPhone}
+                                            onChange={(e) => setBuyerPhone(e.target.value)}
+                                            className="h-12"
+                                        />
+                                    </div>
+                                </div>
                             </div>
 
-                            <div className="space-y-2">
-                                <Label htmlFor="email" className="text-sm font-medium">Email Address *</Label>
-                                <Input
-                                    id="email"
-                                    type="email"
-                                    placeholder="you@example.com"
-                                    value={buyerEmail}
-                                    onChange={(e) => setBuyerEmail(e.target.value)}
-                                    required
-                                    className="h-12 rounded-xl"
-                                />
-                            </div>
+                            {/* Payment Method */}
+                            <div className="bg-background border border-border rounded-xl p-6">
+                                <h2 className="text-lg font-semibold mb-5">Payment Method</h2>
 
-                            <div className="space-y-2">
-                                <Label htmlFor="phone" className="text-sm font-medium">Phone Number</Label>
-                                <Input
-                                    id="phone"
-                                    type="tel"
-                                    placeholder="+254 7XX XXX XXX"
-                                    value={buyerPhone}
-                                    onChange={(e) => setBuyerPhone(e.target.value)}
-                                    className="h-12 rounded-xl"
-                                />
-                            </div>
+                                <div className="space-y-3">
+                                    {/* Card Option */}
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectedMethod("card")}
+                                        className={cn(
+                                            "w-full flex items-center gap-4 p-4 rounded-xl border-2 transition-all text-left",
+                                            selectedMethod === "card"
+                                                ? "border-primary bg-primary/5"
+                                                : "border-border hover:border-muted-foreground/30"
+                                        )}
+                                    >
+                                        <div className={cn(
+                                            "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0",
+                                            selectedMethod === "card" ? "border-primary bg-primary" : "border-muted-foreground/40"
+                                        )}>
+                                            {selectedMethod === "card" && <Check className="w-3 h-3 text-black" />}
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="font-medium">Credit / Debit Card</p>
+                                            <p className="text-xs text-muted-foreground mt-0.5">Pay with Visa, Mastercard, or Verve</p>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            {/* Visa Logo */}
+                                            <div className="w-10 h-6 bg-white border border-border rounded flex items-center justify-center">
+                                                <svg viewBox="0 0 48 32" className="h-4 w-auto">
+                                                    <path fill="#1A1F71" d="M19.5 10.5L16.5 21.5H14L17 10.5H19.5ZM30.5 17.5L32 13.5L33 17.5H30.5ZM34 21.5H36.5L34.5 10.5H32.5C32 10.5 31.5 10.8 31.3 11.3L27 21.5H29.5L30 20H33L33.3 21.5H34ZM26 17C26 14 22 13.8 22 12.5C22 12 22.5 11.5 23.5 11.5C24.3 11.5 25 11.7 25.5 12L26 10.2C25.3 10 24.5 9.8 23.5 9.8C21 9.8 19.3 11 19.3 12.7C19.3 15 22.3 15.3 22.3 16.5C22.3 17 21.7 17.5 20.7 17.5C19.7 17.5 18.7 17.2 18 16.8L17.5 18.7C18.2 19 19.2 19.2 20.2 19.2C23 19.2 24.7 18 24.7 16.2L26 17ZM16 10.5L12 21.5H9.5L7 12.5C7 12 6.7 11.5 6.2 11.3C5.5 11 4.3 10.7 3.2 10.5L3.3 10H7.3C7.8 10 8.3 10.4 8.4 10.9L9.5 17L12 10.5H14.5H16Z" />
+                                                </svg>
+                                            </div>
+                                            {/* Mastercard Logo */}
+                                            <div className="w-10 h-6 bg-white border border-border rounded flex items-center justify-center">
+                                                <svg viewBox="0 0 48 32" className="h-4 w-auto">
+                                                    <circle cx="18" cy="16" r="8" fill="#EB001B" />
+                                                    <circle cx="30" cy="16" r="8" fill="#F79E1B" />
+                                                    <path d="M24 10c2 1.5 3.3 4 3.3 6.5S26 21.5 24 23c-2-1.5-3.3-4-3.3-6.5S22 11.5 24 10z" fill="#FF5F00" />
+                                                </svg>
+                                            </div>
+                                        </div>
+                                    </button>
 
-                            {/* Payment Methods */}
-                            <div className="pt-2">
-                                <p className="text-xs font-medium text-muted-foreground mb-3">PAYMENT METHODS</p>
-                                <div className="flex items-center gap-3 flex-wrap">
-                                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-muted rounded-full text-xs">
-                                        <CreditCard className="w-3.5 h-3.5" />
-                                        <span>Card</span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-muted rounded-full text-xs">
-                                        <Smartphone className="w-3.5 h-3.5" />
-                                        <span>M-Pesa</span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-muted rounded-full text-xs">
-                                        <Building2 className="w-3.5 h-3.5" />
-                                        <span>Bank</span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-muted rounded-full text-xs">
-                                        <Wallet className="w-3.5 h-3.5" />
-                                        <span>USSD</span>
-                                    </div>
+                                    {/* M-Pesa Option */}
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectedMethod("mpesa")}
+                                        className={cn(
+                                            "w-full flex items-center gap-4 p-4 rounded-xl border-2 transition-all text-left",
+                                            selectedMethod === "mpesa"
+                                                ? "border-primary bg-primary/5"
+                                                : "border-border hover:border-muted-foreground/30"
+                                        )}
+                                    >
+                                        <div className={cn(
+                                            "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0",
+                                            selectedMethod === "mpesa" ? "border-primary bg-primary" : "border-muted-foreground/40"
+                                        )}>
+                                            {selectedMethod === "mpesa" && <Check className="w-3 h-3 text-black" />}
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="font-medium">M-Pesa</p>
+                                            <p className="text-xs text-muted-foreground mt-0.5">Pay via Safaricom M-Pesa</p>
+                                        </div>
+                                        {/* M-Pesa Logo */}
+                                        <div className="w-16 h-6 bg-[#00A64B] rounded flex items-center justify-center px-2">
+                                            <span className="text-white text-xs font-bold">M-PESA</span>
+                                        </div>
+                                    </button>
+
+                                    {/* Bank Transfer Option */}
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectedMethod("bank")}
+                                        className={cn(
+                                            "w-full flex items-center gap-4 p-4 rounded-xl border-2 transition-all text-left",
+                                            selectedMethod === "bank"
+                                                ? "border-primary bg-primary/5"
+                                                : "border-border hover:border-muted-foreground/30"
+                                        )}
+                                    >
+                                        <div className={cn(
+                                            "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0",
+                                            selectedMethod === "bank" ? "border-primary bg-primary" : "border-muted-foreground/40"
+                                        )}>
+                                            {selectedMethod === "bank" && <Check className="w-3 h-3 text-black" />}
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="font-medium">Bank Transfer</p>
+                                            <p className="text-xs text-muted-foreground mt-0.5">Pay directly from your bank account</p>
+                                        </div>
+                                        <div className="w-10 h-6 bg-muted rounded flex items-center justify-center">
+                                            <svg className="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                            </svg>
+                                        </div>
+                                    </button>
                                 </div>
                             </div>
 
@@ -234,7 +339,7 @@ export function LinkPageClient({ link }: LinkPageClientProps) {
                             <Button
                                 onClick={handlePayNow}
                                 disabled={isProcessing}
-                                className="w-full h-14 bg-primary hover:bg-primary/90 text-black font-bold text-base rounded-xl shadow-lg shadow-primary/25 transition-all hover:shadow-xl hover:shadow-primary/30"
+                                className="w-full h-14 bg-primary hover:bg-primary/90 text-black font-semibold text-base rounded-xl"
                             >
                                 {isProcessing ? (
                                     <>
@@ -246,47 +351,108 @@ export function LinkPageClient({ link }: LinkPageClientProps) {
                                 )}
                             </Button>
 
-                            {/* Security Badge */}
-                            <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground pt-2">
+                            {/* Security Notice */}
+                            <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
                                 <Lock className="w-3.5 h-3.5" />
                                 <span>Secured by Paystack • 256-bit SSL encryption</span>
                             </div>
                         </div>
-                    </div>
 
-                    {/* Escrow Info */}
-                    <div className="mt-4 p-4 bg-primary/5 border border-primary/20 rounded-xl">
-                        <div className="flex items-start gap-3">
-                            <ShieldCheck className="w-5 h-5 text-primary mt-0.5" />
-                            <div>
-                                <p className="font-semibold text-sm text-primary">Your payment is protected</p>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                    Funds are held securely until you confirm delivery. If something goes wrong, you're covered.
-                                </p>
+                        {/* Right: Order Summary - Desktop */}
+                        <div className="hidden lg:block">
+                            <div className="sticky top-20 space-y-4">
+                                <div className="bg-background border border-border rounded-xl p-6">
+                                    <h2 className="text-lg font-semibold mb-5">Order Summary</h2>
+
+                                    {/* Product */}
+                                    <div className="flex gap-4 pb-5 border-b border-border">
+                                        {link.images?.[0] ? (
+                                            <div className="w-20 h-20 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                                                <Image src={link.images[0]} alt="" width={80} height={80} className="object-cover w-full h-full" />
+                                            </div>
+                                        ) : (
+                                            <div className="w-20 h-20 rounded-lg bg-muted flex-shrink-0" />
+                                        )}
+                                        <div className="flex-1 min-w-0">
+                                            <p className="font-medium line-clamp-2">{link.item_name}</p>
+                                            <p className="text-sm text-muted-foreground mt-1">Seller: {link.seller?.business_name || "Verified Seller"}</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Price Breakdown */}
+                                    <div className="space-y-3 py-5 border-b border-border">
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-muted-foreground">Item Price</span>
+                                            <span>KES {Number(link.item_price).toLocaleString()}</span>
+                                        </div>
+                                        {link.delivery_fee > 0 && (
+                                            <div className="flex justify-between text-sm">
+                                                <span className="text-muted-foreground">Delivery</span>
+                                                <span>KES {Number(link.delivery_fee).toLocaleString()}</span>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Total */}
+                                    <div className="flex justify-between pt-5">
+                                        <span className="font-semibold">
+                                            {link.escrow_mode === "split_risk" ? "Deposit Due" : "Total"}
+                                        </span>
+                                        <span className="text-xl font-bold text-primary">KES {depositAmount?.toLocaleString()}</span>
+                                    </div>
+
+                                    {link.escrow_mode === "split_risk" && (
+                                        <p className="text-xs text-muted-foreground mt-2">
+                                            + KES {(totalPrice - (depositAmount || 0)).toLocaleString()} on delivery
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Escrow Protection Card */}
+                                <div className="bg-primary/5 border border-primary/20 rounded-xl p-5">
+                                    <div className="flex gap-3">
+                                        <ShieldCheck className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                                        <div>
+                                            <p className="font-semibold text-sm">Your payment is protected</p>
+                                            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                                                Funds are held securely until you confirm delivery. If something goes wrong, you're covered.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
+                </main>
             </div>
         )
     }
 
+    // PRODUCT PAGE
     return (
-        <div className="min-h-dvh bg-background font-[family-name:var(--font-roboto)]">
+        <div className="min-h-dvh bg-background">
             {/* Navigation */}
             <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border">
-                <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
                     <Link href="/" className="flex items-center gap-2 group">
                         <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                        <span className="font-serif-display text-xl tracking-wide group-hover:text-primary transition-colors">krowba</span>
+                        <span className="font-semibold text-xl group-hover:text-primary transition-colors">krowba</span>
                     </Link>
                     <div className="flex items-center gap-3">
                         <button
                             onClick={copyLink}
                             className="p-2 hover:bg-muted rounded-lg transition-colors"
+                            aria-label="Share link"
                         >
                             <Share2 className="w-4 h-4 text-muted-foreground" />
                         </button>
+                        <Link
+                            href="/login"
+                            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium hover:bg-muted rounded-lg transition-colors"
+                        >
+                            <User className="w-4 h-4" />
+                            <span className="hidden sm:inline">Login</span>
+                        </Link>
                         <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-full">
                             <ShieldCheck className="h-3.5 w-3.5" />
                             <span className="text-xs font-medium">Escrow Protected</span>
@@ -296,13 +462,13 @@ export function LinkPageClient({ link }: LinkPageClientProps) {
             </nav>
 
             {/* Main Content */}
-            <main className="max-w-6xl mx-auto px-6 py-12">
-                <div className="grid grid-cols-1 md:grid-cols-[400px_1fr] gap-12 items-start">
+            <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+                <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr] lg:grid-cols-[400px_1fr] gap-8 lg:gap-12 items-start">
 
                     {/* Left: Product Image */}
                     <div className="space-y-4">
                         <CometCard className="w-full" rotateDepth={8} translateDepth={12}>
-                            <div className="relative aspect-square bg-card border border-border rounded-3xl overflow-hidden shadow-2xl group">
+                            <div className="relative aspect-square bg-card border border-border rounded-2xl sm:rounded-3xl overflow-hidden shadow-xl group">
                                 {link.images?.[currentImageIndex] ? (
                                     <Image
                                         src={link.images[currentImageIndex]}
@@ -318,28 +484,28 @@ export function LinkPageClient({ link }: LinkPageClientProps) {
                                 )}
 
                                 {/* Gradient Overlay */}
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-90" />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
                                 {/* Product Info Overlay */}
-                                <div className="absolute bottom-0 left-0 right-0 p-6 translate-y-2 group-hover:translate-y-0 transition-transform duration-500">
-                                    <h2 className="font-bold text-2xl text-white truncate drop-shadow-md">{link.item_name}</h2>
-                                    <p className="text-white/90 font-medium text-lg mt-1 drop-shadow-md">KES {Number(link.item_price).toLocaleString()}</p>
+                                <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-6">
+                                    <h2 className="font-bold text-xl sm:text-2xl text-white truncate">{link.item_name}</h2>
+                                    <p className="text-white/90 font-medium text-lg mt-1">KES {Number(link.item_price).toLocaleString()}</p>
                                 </div>
                             </div>
                         </CometCard>
 
                         {/* Thumbnails */}
                         {link.images && link.images.length > 1 && (
-                            <div className="flex gap-2">
+                            <div className="flex gap-2 overflow-x-auto pb-2">
                                 {link.images.map((img, idx) => (
                                     <button
                                         key={idx}
                                         onClick={() => setCurrentImageIndex(idx)}
                                         className={cn(
-                                            "w-14 h-14 rounded-md overflow-hidden border transition-all",
+                                            "w-14 h-14 flex-shrink-0 rounded-lg overflow-hidden border-2 transition-all",
                                             idx === currentImageIndex
-                                                ? "border-foreground ring-2 ring-foreground/20"
-                                                : "border-border opacity-50 hover:opacity-100"
+                                                ? "border-primary ring-2 ring-primary/20"
+                                                : "border-transparent opacity-60 hover:opacity-100"
                                         )}
                                     >
                                         <Image src={img} alt="" width={56} height={56} className="object-cover w-full h-full" />
@@ -353,7 +519,7 @@ export function LinkPageClient({ link }: LinkPageClientProps) {
                     <div className="space-y-6">
                         {/* Title & Description */}
                         <div className="space-y-3">
-                            <h1 className="text-3xl font-serif-display font-bold leading-tight">
+                            <h1 className="text-2xl sm:text-3xl font-bold leading-tight">
                                 {link.item_name}
                             </h1>
 
@@ -393,15 +559,15 @@ export function LinkPageClient({ link }: LinkPageClientProps) {
                             <p className="text-xs text-muted-foreground leading-relaxed">
                                 {link.escrow_mode === "full_escrow"
                                     ? "Your payment is held securely until you confirm delivery. 100% buyer protection."
-                                    : `Pay KES ${depositAmount?.toLocaleString()} deposit now. The rest (KES ${(totalPrice - (depositAmount || 0)).toLocaleString()}) on delivery.`
+                                    : `Pay KES ${depositAmount?.toLocaleString()} deposit now. The rest on delivery.`
                                 }
                             </p>
                         </div>
 
                         {/* CTA Button */}
                         <Button
-                            onClick={() => setShowPaymentForm(true)}
-                            className="w-full h-14 bg-primary hover:bg-primary/90 text-black font-bold text-base rounded-xl shadow-lg shadow-primary/25 transition-all hover:shadow-xl hover:shadow-primary/30 hover:scale-[1.02]"
+                            onClick={() => setShowCheckout(true)}
+                            className="w-full h-14 bg-primary hover:bg-primary/90 text-black font-semibold text-base rounded-xl"
                         >
                             {link.escrow_mode === "split_risk"
                                 ? `Pay KES ${depositAmount?.toLocaleString()} Deposit`
@@ -438,17 +604,14 @@ export function LinkPageClient({ link }: LinkPageClientProps) {
                         <div className="pt-6 border-t border-border">
                             <p className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wider">Share this link</p>
                             <div className="flex items-center gap-2">
-                                <Button variant="outline" size="icon" className="rounded-full h-10 w-10 hover:bg-[#25D366] hover:text-white transition-colors" onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(window.location.href)}`, '_blank')}>
+                                <Button variant="outline" size="icon" className="rounded-full h-10 w-10 hover:bg-[#25D366] hover:text-white hover:border-[#25D366] transition-colors" onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(window.location.href)}`, '_blank')}>
                                     <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" /></svg>
                                 </Button>
-                                <Button variant="outline" size="icon" className="rounded-full h-10 w-10 hover:bg-black hover:text-white transition-colors" onClick={() => window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(window.location.href)}`, '_blank')}>
+                                <Button variant="outline" size="icon" className="rounded-full h-10 w-10 hover:bg-black hover:text-white hover:border-black transition-colors" onClick={() => window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(window.location.href)}`, '_blank')}>
                                     <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
                                 </Button>
-                                <Button variant="outline" size="icon" className="rounded-full h-10 w-10 hover:bg-black hover:text-white transition-colors" onClick={() => window.open(`https://www.tiktok.com/share?url=${encodeURIComponent(window.location.href)}`, '_blank')}>
+                                <Button variant="outline" size="icon" className="rounded-full h-10 w-10 hover:bg-black hover:text-white hover:border-black transition-colors" onClick={() => window.open(`https://www.tiktok.com/share?url=${encodeURIComponent(window.location.href)}`, '_blank')}>
                                     <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" /></svg>
-                                </Button>
-                                <Button variant="outline" size="icon" className="rounded-full h-10 w-10 hover:bg-pink-600 hover:text-white transition-colors" onClick={() => window.open(`https://www.instagram.com/`, '_blank')}>
-                                    <svg viewBox="0 0 24 24" className="h-5 w-5 fill-none stroke-current stroke-2"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
                                 </Button>
                             </div>
                         </div>
