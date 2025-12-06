@@ -50,6 +50,12 @@ export async function GET(request: NextRequest) {
         })
         .eq("id", transaction.id)
 
+      // Also mark the link as sold
+      await supabase
+        .from("krowba_links")
+        .update({ status: "sold" })
+        .eq("id", transaction.krowba_link_id)
+
       return NextResponse.json({
         success: true,
         data: {

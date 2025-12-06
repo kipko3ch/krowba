@@ -18,7 +18,7 @@ import QRCode from "react-qr-code"
 
 export function CreateLinkWizard() {
     const router = useRouter()
-    const [step, setStep] = useState<1 | 2 | 3 | 4 | "loading" | "success">(1)
+    const [step, setStep] = useState<1 | 2 | 3 | 4 | 5 | "loading" | "success">(1)
     const [isLoading, setIsLoading] = useState(false)
     const [isAnalyzing, setIsAnalyzing] = useState(false)
 
@@ -31,6 +31,11 @@ export function CreateLinkWizard() {
     const [depositAmount, setDepositAmount] = useState("")
     const [accessPin, setAccessPin] = useState("")
     const [escrowMode, setEscrowMode] = useState<EscrowMode>("full_escrow")
+
+    // Buyer Details
+    const [buyerName, setBuyerName] = useState("")
+    const [buyerEmail, setBuyerEmail] = useState("")
+    const [buyerPhone, setBuyerPhone] = useState("")
 
     // Success State
     const [createdLink, setCreatedLink] = useState<{ short_code: string; id: string } | null>(null)
@@ -143,6 +148,9 @@ export function CreateLinkWizard() {
                     deposit_amount: escrowMode === "split_risk" ? Number(depositAmount) : null,
                     access_pin: accessPin || null,
                     escrow_mode: escrowMode,
+                    buyer_name: buyerName || null,
+                    buyer_email: buyerEmail || null,
+                    buyer_phone: buyerPhone || null,
                     images
                 }),
             })
@@ -333,7 +341,7 @@ export function CreateLinkWizard() {
             {/* Progress Steps */}
             <div className="flex items-center justify-between mb-12 relative max-w-lg mx-auto">
                 <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-0.5 bg-border -z-10" />
-                {[1, 2, 3, 4].map((s) => (
+                {[1, 2, 3, 4, 5].map((s) => (
                     <div
                         key={s}
                         className={cn(
@@ -690,7 +698,7 @@ export function CreateLinkWizard() {
                         </Button>
                         <Button
                             onClick={() => setStep(4)}
-                            disabled={!itemPrice}
+                            disabled={!itemPrice || !accessPin}
                             className="rounded-full px-8 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg shadow-primary/20 transition-all hover:scale-105"
                         >
                             Next <ArrowRight className="ml-2 h-4 w-4" />
@@ -699,8 +707,64 @@ export function CreateLinkWizard() {
                 </div>
             )}
 
-            {/* STEP 4: REVIEW */}
+            {/* STEP 4: BUYER DETAILS */}
             {step === 4 && (
+                <div className="space-y-8 animate-in fade-in slide-in-from-right-8 duration-500">
+                    <div className="text-center space-y-2">
+                        <h2 className="text-2xl font-serif font-medium">Buyer Details</h2>
+                        <p className="text-muted-foreground">Who is this link for?</p>
+                    </div>
+
+                    <div className="bg-card border border-border rounded-2xl p-8 shadow-lg space-y-6">
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <Label>Buyer Name (Optional)</Label>
+                                <Input
+                                    value={buyerName}
+                                    onChange={(e) => setBuyerName(e.target.value)}
+                                    placeholder="e.g. Jane Doe"
+                                    className="h-12 bg-background"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Buyer Email (Optional)</Label>
+                                <Input
+                                    type="email"
+                                    value={buyerEmail}
+                                    onChange={(e) => setBuyerEmail(e.target.value)}
+                                    placeholder="jane@example.com"
+                                    className="h-12 bg-background"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Buyer Phone (Optional)</Label>
+                                <Input
+                                    type="tel"
+                                    value={buyerPhone}
+                                    onChange={(e) => setBuyerPhone(e.target.value)}
+                                    placeholder="+254..."
+                                    className="h-12 bg-background"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex justify-between pt-4">
+                        <Button variant="ghost" onClick={() => setStep(3)} className="hover:bg-transparent hover:text-primary">
+                            <ArrowLeft className="mr-2 h-4 w-4" /> Back
+                        </Button>
+                        <Button
+                            onClick={() => setStep(5)}
+                            className="rounded-full px-8 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg shadow-primary/20 transition-all hover:scale-105"
+                        >
+                            Next <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                    </div>
+                </div>
+            )}
+
+            {/* STEP 5: REVIEW */}
+            {step === 5 && (
                 <div className="space-y-8 animate-in fade-in slide-in-from-right-8 duration-500">
                     <div className="text-center space-y-2">
                         <h2 className="text-2xl font-serif font-medium">Ready to Launch</h2>
@@ -739,7 +803,7 @@ export function CreateLinkWizard() {
                         </div>
 
                         <div className="space-y-3">
-                            <Label>Security PIN (Optional)</Label>
+                            <Label>Security PIN <span className="text-destructive">*</span></Label>
                             <Input
                                 value={accessPin}
                                 onChange={(e) => setAccessPin(e.target.value)}
@@ -751,7 +815,7 @@ export function CreateLinkWizard() {
                     </div>
 
                     <div className="flex flex-col-reverse sm:flex-row justify-between gap-4 pt-4">
-                        <Button variant="outline" onClick={() => setStep(3)} className="rounded-full px-8 py-6 text-lg w-full sm:w-auto hover:bg-muted">
+                        <Button variant="outline" onClick={() => setStep(4)} className="rounded-full px-8 py-6 text-lg w-full sm:w-auto hover:bg-muted">
                             <ArrowLeft className="mr-2 h-5 w-5" /> Back
                         </Button>
                         <Button

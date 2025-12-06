@@ -22,11 +22,11 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { item_name, description, item_price, delivery_fee, escrow_mode, deposit_amount, images, access_pin } = body
+    const { item_name, description, item_price, delivery_fee, escrow_mode, deposit_amount, images, access_pin, buyer_name, buyer_email, buyer_phone } = body
     const seller_id = user.id
 
     // Validate required fields
-    if (!item_name || !item_price || !images || images.length === 0) {
+    if (!item_name || !item_price || !images || images.length === 0 || !access_pin) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
@@ -74,6 +74,9 @@ export async function POST(request: NextRequest) {
         escrow_mode,
         deposit_amount: escrow_mode === "split_risk" ? deposit_amount || delivery_fee || 0 : null,
         access_pin: body.access_pin || null,
+        buyer_name: buyer_name || null,
+        buyer_email: buyer_email || null,
+        buyer_phone: buyer_phone || null,
         images,
         ai_verification_status: "pending",
         status: "active",

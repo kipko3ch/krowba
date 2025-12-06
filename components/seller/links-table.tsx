@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { MoreHorizontal, Copy, ExternalLink, Trash2, Eye, QrCode } from "lucide-react"
+import { MoreHorizontal, Copy, ExternalLink, Trash2, Eye, QrCode, Truck } from "lucide-react"
 import { toast } from "sonner"
 import { QRCodeSVG } from "qrcode.react"
 import {
@@ -141,6 +141,34 @@ export function LinksTable({ links }: LinksTableProps) {
                                 </TableCell>
                                 <TableCell className="text-right">
                                     <div className="flex items-center justify-end gap-2">
+                                        {link.status === 'sold' && link.shipping_status !== 'shipped' && link.shipping_status !== 'delivered' && (
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="h-8 border-primary/30 text-primary hover:bg-primary/10"
+                                                onClick={async () => {
+                                                    if (!confirm("Mark this item as shipped?")) return;
+                                                    try {
+                                                        const res = await fetch("/api/orders/update-status", {
+                                                            method: "POST",
+                                                            body: JSON.stringify({ linkId: link.id, status: 'shipped', action: 'mark_shipped' })
+                                                        })
+                                                        if (res.ok) {
+                                                            toast.success("Marked as shipped")
+                                                            router.refresh()
+                                                        } else {
+                                                            throw new Error("Failed to update")
+                                                        }
+                                                    } catch (e) {
+                                                        toast.error("Failed to update status")
+                                                    }
+                                                }}
+                                            >
+                                                <Truck className="h-3.5 w-3.5 mr-1.5" />
+                                                Ship
+                                            </Button>
+                                        )}
+
                                         <Button
                                             variant="ghost"
                                             size="icon"

@@ -163,7 +163,7 @@ export default function HomePage() {
                 key={idx}
                 onClick={() => setMobileMenuOpen(false)}
                 href={item.href}
-                className={`font-serif-display text-gray-900 ${item.label === 'Login' ? 'text-4xl font-bold text-primary mt-4' : 'text-3xl'}`}
+                className={`font-serif-display text-gray-900 ${item.label === 'Login' ? 'w-full max-w-[200px] bg-black text-white py-3 rounded-full text-xl font-bold mt-4 flex items-center justify-center' : 'text-3xl'}`}
                 variants={mobileItemVariants}
                 whileHover={{ scale: 1.05, color: "#44F91F" }}
               >
