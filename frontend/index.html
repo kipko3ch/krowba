@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Krowba - AI-Powered Escrow</title>
+    <link rel="icon" type="image/png" href="/public/favicon.png" />
+
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Hedvig+Letters+Serif:opsz@12..24&family=Roboto:wght@300;400;500;700&display=swap"
+        rel="stylesheet" />
+
+    <!-- Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#44f91f", // Neon Green
+                        "primary-dim": "#36c919",
+                        "background-light": "#f6f8f5",
+                        "background-dark": "#0a1208", // Deepest Green/Black
+                        "surface-dark": "#13230f", // Card background
+                        "royal-blue": "#002366",
+                    },
+                    fontFamily: {
+                        "display": ["Roboto", "sans-serif"],
+                        "serif-display": ["Hedvig Letters Serif", "serif"],
+                        "sans": ["Roboto", "sans-serif"]
+                    },
+                    backgroundImage: {
+                        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+                    }
+                },
+            },
+        }
+    </script>
+
+    <style>
+        :root {
+            --glass-bg: rgba(255, 255, 255, 0.8);
+            --glass-border: rgba(0, 0, 0, 0.1);
+        }
+
+        .dark {
+            --glass-bg: rgba(19, 35, 15, 0.6);
+            --glass-border: rgba(68, 249, 31, 0.1);
+        }
+
+        body {
+            /* Tailwind handles background colors via classes on <main> or <body> in App.tsx usually, 
+               but setting defaults here helps prevent FOUC */
+            background-color: #f6f8f5;
+            color: #111827;
+            font-family: 'Roboto', sans-serif;
+            overflow-x: hidden;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .dark body {
+            background-color: #0a1208;
+            color: #f6f8f5;
+        }
+
+        /* Custom Utilities */
+        .font-serif-display {
+            font-family: 'Hedvig Letters Serif', serif;
+        }
+
+        .soft-glow {
+            box-shadow: 0 0 20px rgba(68, 249, 31, 0.15);
+        }
+
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+        }
+
+        .text-glow {
+            text-shadow: 0 0 10px rgba(68, 249, 31, 0.3);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        .dark ::-webkit-scrollbar-track {
+            background: #0a1208;
+        }
+
+        .dark ::-webkit-scrollbar-thumb {
+            background: #13230f;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #44f91f;
+        }
+    </style>
+    <script type="importmap">
+{
+  "imports": {
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0",
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.555.0"
+  }
+}
+</script>
+    <link rel="stylesheet" href="/index.css">
+</head>
+
+<body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+</body>
+
+</html>

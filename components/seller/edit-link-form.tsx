@@ -1,0 +1,293 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { ImageUploader } from "@/components/seller/image-uploader"
+import { toast } from "sonner"
+import { Loader2, Shield, AlertTriangle, Package, DollarSign, Lock, ArrowLeft } from "lucide-react"
+import type { EscrowMode, KrowbaLink } from "@/types"
+import Link from "next/link"
+
+interface EditLinkFormProps {
+    link: KrowbaLink
+}
+
+export function EditLinkForm({ link }: EditLinkFormProps) {
+    const router = useRouter()
+    const [isLoading, setIsLoading] = useState(false)
+    const [images, setImages] = useState<string[]>(link.images || [])
+    const [escrowMode, setEscrowMode] = useState<EscrowMode>(link.escrow_mode)
+
+    const [formData, setFormData] = useState({
+        item_name: link.item_name,
+        description: "", // Description is not in KrowbaLink but in Items table. For MVP we might skip pre-filling description or fetch it separately.
+        // Actually, we should fetch the item details to get description. For now, let's assume we might not edit description here or we fetch it.
+        // The link object passed here might not have description.
+        item_price: link.item_price.toString(),
+        delivery_fee: link.delivery_fee.toString(),
+        deposit_amount: link.deposit_amount?.toString() || "",
+        access_pin: link.access_pin || "",
+    })
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+
+        if (images.length === 0) {
+            toast.error("Please upload at least one product image")
+            return
+        }
+
+        if (!formData.item_name || !formData.item_price) {
+            toast.error("Please fill in all required fields")
+            return
+        }
+
+        setIsLoading(true)
+
+        try {
+            console.log("Submitting update:", {
+                link_id: link.id,
+                access_pin: formData.access_pin,
+                escrow_mode: escrowMode
+            })
+
+            const response = await fetch("/api/seller/update-link", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    link_id: link.id,
+                    item_name: formData.item_name,
+                    item_price: Number.parseFloat(formData.item_price),
+                    delivery_fee: Number.parseFloat(formData.delivery_fee) || 0,
+                    escrow_mode: escrowMode,
+                    deposit_amount:
+                        escrowMode === "split_risk"
+                            ? Number.parseFloat(formData.deposit_amount) || Number.parseFloat(formData.delivery_fee) || 0
+                            : null,
+                    access_pin: formData.access_pin || null,
+                    images,
+                }),
+            })
+
+            const result = await response.json()
+
+            if (!response.ok) {
+                throw new Error(result.error || "Failed to update link")
+            }
+
+            toast.success("Link updated successfully!")
+            router.push("/dashboard/links")
+            router.refresh()
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : "Failed to update link")
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    const totalAmount = (Number.parseFloat(formData.item_price) || 0) + (Number.parseFloat(formData.delivery_fee) || 0)
+
+    return (
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left Column - Form Inputs */}
+            <div className="lg:col-span-2 space-y-6">
+                {/* Product Details */}
+                <div className="bg-card border border-border rounded-lg p-4 sm:p-6 space-y-4 shadow-sm">
+                    <div className="flex items-center gap-2 mb-4">
+                        <Package className="h-5 w-5 text-primary" />
+                        <h2 className="text-lg font-semibold text-foreground">Edit Product Details</h2>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="item_name" className="text-foreground">Item Name *</Label>
+                        <Input
+                            id="item_name"
+                            placeholder="e.g., iPhone 14 Pro Max 256GB"
+                            value={formData.item_name}
+                            onChange={(e) => setFormData({ ...formData, item_name: e.target.value })}
+                            required
+                            className="bg-background border-input text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary"
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="item_price" className="text-foreground">Price (KES) *</Label>
+                            <div className="relative">
+                                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                    id="item_price"
+                                    type="number"
+                                    min="1"
+                                    placeholder="50000"
+                                    value={formData.item_price}
+                                    onChange={(e) => setFormData({ ...formData, item_price: e.target.value })}
+                                    required
+                                    className="pl-10 bg-background border-input text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary"
+                                />
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="delivery_fee" className="text-foreground">Delivery Fee (KES)</Label>
+                            <div className="relative">
+                                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                    id="delivery_fee"
+                                    type="number"
+                                    min="0"
+                                    placeholder="500"
+                                    value={formData.delivery_fee}
+                                    onChange={(e) => setFormData({ ...formData, delivery_fee: e.target.value })}
+                                    className="pl-10 bg-background border-input text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="access_pin" className="text-foreground">Security PIN (Optional)</Label>
+                        <div className="relative">
+                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                id="access_pin"
+                                type="text"
+                                placeholder="e.g., 1234"
+                                value={formData.access_pin}
+                                onChange={(e) => setFormData({ ...formData, access_pin: e.target.value })}
+                                className="pl-10 bg-background border-input text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary"
+                            />
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                            Set a PIN to restrict access to this link. Buyers will need to enter this PIN to view the payment page.
+                        </p>
+                    </div>
+                </div>
+
+                {/* Product Images */}
+                <div className="bg-card border border-border rounded-lg p-4 sm:p-6 space-y-4 shadow-sm">
+                    <h2 className="text-lg font-semibold text-foreground">Product Images *</h2>
+                    <p className="text-sm text-muted-foreground">
+                        Upload 1-5 clear photos. Our AI will verify these match your description.
+                    </p>
+                    <ImageUploader images={images} onImagesChange={setImages} maxImages={5} folder="products" />
+                </div>
+            </div>
+
+            {/* Right Column - Sticky Sidebar */}
+            <div className="lg:col-span-1 space-y-6">
+                <div className="lg:sticky lg:top-6 space-y-6">
+                    {/* Payment Protection */}
+                    <div className="bg-card border border-border rounded-lg p-4 sm:p-6 space-y-4 shadow-sm">
+                        <h2 className="text-lg font-semibold text-foreground">Payment Protection</h2>
+
+                        <RadioGroup value={escrowMode} onValueChange={(v) => setEscrowMode(v as EscrowMode)} className="space-y-3">
+                            <div
+                                className={`border rounded-lg p-4 cursor-pointer transition-all ${escrowMode === "full_escrow"
+                                    ? "border-primary bg-primary/10 shadow-sm"
+                                    : "border-border hover:border-primary/60"
+                                    }`}
+                                onClick={() => setEscrowMode("full_escrow")}
+                            >
+                                <div className="flex items-start gap-3">
+                                    <RadioGroupItem value="full_escrow" id="full_escrow" className="mt-0.5" />
+                                    <div className="flex-1">
+                                        <Label htmlFor="full_escrow" className="font-medium cursor-pointer text-foreground flex items-center gap-2">
+                                            <Shield className="h-4 w-4 text-primary" />
+                                            Full Escrow
+                                        </Label>
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                            Maximum protection. Funds held until delivery confirmed.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div
+                                className={`border rounded-lg p-4 cursor-pointer transition-all ${escrowMode === "split_risk"
+                                    ? "border-yellow-500 bg-yellow-500/10 shadow-sm"
+                                    : "border-border hover:border-yellow-500/60"
+                                    }`}
+                                onClick={() => setEscrowMode("split_risk")}
+                            >
+                                <div className="flex items-start gap-3">
+                                    <RadioGroupItem value="split_risk" id="split_risk" className="mt-0.5" />
+                                    <div className="flex-1">
+                                        <Label htmlFor="split_risk" className="font-medium cursor-pointer text-foreground flex items-center gap-2">
+                                            <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                                            Deposit Only
+                                        </Label>
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                            Lower upfront cost. Balance paid on delivery.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </RadioGroup>
+
+                        {escrowMode === "split_risk" && (
+                            <div className="space-y-2 pt-2 animate-in slide-in-from-top-2">
+                                <Label htmlFor="deposit_amount" className="text-foreground text-sm">Deposit Amount (KES)</Label>
+                                <Input
+                                    id="deposit_amount"
+                                    type="number"
+                                    min="1"
+                                    placeholder={formData.delivery_fee || "500"}
+                                    value={formData.deposit_amount}
+                                    onChange={(e) => setFormData({ ...formData, deposit_amount: e.target.value })}
+                                    className="bg-background border-input text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary"
+                                />
+                                <p className="text-xs text-muted-foreground">Leave empty to use delivery fee</p>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Summary */}
+                    <div className="bg-primary/5 backdrop-blur-sm border border-primary/20 rounded-lg p-4 sm:p-6 space-y-4 shadow-lg">
+                        <h2 className="text-lg font-semibold text-foreground">Summary</h2>
+                        <div className="space-y-3 text-sm">
+                            <div className="flex justify-between items-center">
+                                <span className="text-muted-foreground">Item Price</span>
+                                <span className="text-foreground font-medium">KES {(Number.parseFloat(formData.item_price) || 0).toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                                <span className="text-muted-foreground">Delivery Fee</span>
+                                <span className="text-foreground font-medium">KES {(Number.parseFloat(formData.delivery_fee) || 0).toLocaleString()}</span>
+                            </div>
+                            <div className="border-t border-primary/20 pt-3 flex justify-between items-center">
+                                <span className="text-foreground font-semibold">Total</span>
+                                <span className="text-primary font-bold text-lg">KES {totalAmount.toLocaleString()}</span>
+                            </div>
+                        </div>
+
+                        <div className="flex gap-3">
+                            <Link href="/dashboard/links" className="flex-1">
+                                <Button variant="outline" className="w-full border-input hover:bg-muted">
+                                    Cancel
+                                </Button>
+                            </Link>
+                            <Button
+                                type="submit"
+                                className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+                                disabled={isLoading}
+                            >
+                                {isLoading ? (
+                                    <>
+                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                        Updating...
+                                    </>
+                                ) : (
+                                    "Save Changes"
+                                )}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    )
+}
