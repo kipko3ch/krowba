@@ -23,7 +23,7 @@ export default async function LinksPage() {
     .order("created_at", { ascending: false })
 
   return (
-    <main className="container mx-auto px-4 py-8">
+    <main className="container mx-auto px-4 py-8 max-w-7xl">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold">My Links</h1>

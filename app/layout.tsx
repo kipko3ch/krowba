@@ -40,26 +40,35 @@ export const viewport: Viewport = {
   initialScale: 1,
 }
 
+import { ThemeProvider } from "@/components/theme-provider"
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={`${roboto.variable} ${hedvigLettersSerif.variable} ${hedvigLettersSans.variable} font-sans antialiased`}>
-        {children}
-        <Toaster
-          richColors
-          theme="system"
-          toastOptions={{
-            className: 'font-sans',
-            style: {
-              borderRadius: '12px',
-            }
-          }}
-        />
-        <Analytics />
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+          <Toaster
+            richColors
+            theme="system"
+            toastOptions={{
+              className: 'font-sans',
+              style: {
+                borderRadius: '12px',
+              }
+            }}
+          />
+          <Analytics />
+        </ThemeProvider>
       </body>
     </html>
   )

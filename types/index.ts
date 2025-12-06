@@ -4,36 +4,7 @@ export type EscrowMode = "split_risk" | "full_escrow"
 export type PaymentType = "deposit" | "full" | "balance"
 export type PaymentStatus = "pending" | "completed" | "failed" | "refunded"
 export type EscrowStatus = "held" | "released" | "refunded" | "disputed"
-export type LinkStatus = "active" | "paid" | "completed" | "cancelled" | "disputed"
-export type AIVerificationStatus = "pending" | "passed" | "warning" | "failed"
-export type DisputeResolution = "pending" | "refund_buyer" | "pay_seller" | "partial_refund"
-
-export interface Seller {
-  id: string
-  business_name: string
-  phone: string
-  email: string
-  verification_score: number
-  total_transactions: number
-  successful_transactions: number
-  created_at: string
-  updated_at: string
-}
-
-export interface Item {
-  id: string
-  seller_id: string
-  name: string
-  description: string | null
-  price: number
-  delivery_fee: number
-  currency: string
-  images: string[]
-  image_hashes: string[]
-  status: "active" | "inactive" | "flagged"
-  created_at: string
-  updated_at: string
-}
+export type LinkStatus = "active" | "paid" | "completed" | "cancelled" | "disputed" | "sold"
 
 export interface KrowbaLink {
   id: string
@@ -51,6 +22,7 @@ export interface KrowbaLink {
   ai_verification_status: AIVerificationStatus
   ai_verification_message: string | null
   status: LinkStatus
+  shipping_status: "pending" | "processing" | "shipped" | "delivered" | "returned" | "rejected"
   expires_at: string | null
   created_at: string
   updated_at: string

@@ -51,26 +51,62 @@ export async function POST(request: NextRequest) {
 
             if (updateError) throw updateError
 
-            // Trigger Fund Release (Call existing API or logic)
-            // For now, we'll just update the transaction status directly here for simplicity
-            // In a real app, this should be a separate secure service call
-
+            // Trigger Fund Release
             const { data: transaction } = await supabase
                 .from("transactions")
-                .select("id")
+                .select("id, amount, seller_id")
                 .eq("krowba_link_id", linkId)
                 .eq("status", "completed") // Only release if paid
                 .single()
 
             if (transaction) {
-                // Call Release Funds API (internal call simulation)
-                // We'll just update the transaction to 'released' status for now to reflect in Admin
-                // The actual payout trigger would happen here
-                await supabase
-                    .from("transactions")
-                    .update({ escrow_status: 'released' }) // Signal to admin it's ready/released
-                    .eq("id", transaction.id)
+                // Check for seller bank account
+                const { data: bankAccount } = await supabase
+                    .from("seller_bank_accounts")
+                    .select("paystack_recipient_code")
+                    .eq("seller_id", transaction.seller_id)
+                    .eq("is_default", true)
+                    .single()
+
+                if (bankAccount?.paystack_recipient_code) {
+                    // Initiate Transfer via Paystack
+                    // Dynamic import to avoid circular deps if any, though not strictly needed here
+                    const { paystack } = await import("@/lib/services/paystack")
+
+                    const transferResult = await paystack.initiateTransfer({
+                        amount: transaction.amount * 100, // Convert to Kobo
+                        recipient: bankAccount.paystack_recipient_code,
+                        reason: `Payout for Order #${linkId.slice(0, 8)}`,
+                        reference: `TRF_${transaction.id}_${Date.now()}`
+                    })
+
+                    if (transferResult.success) {
+                        await supabase
+                            .from("transactions")
+                            .update({ escrow_status: 'released' })
+                            .eq("id", transaction.id)
+                    } else {
+                        console.error("Paystack Transfer Failed:", transferResult.error)
+                        // Log failure but don't fail the request, admin can retry
+                    }
+                } else {
+                    // No bank account, just mark as released for manual payout
+                    await supabase
+                        .from("transactions")
+                        .update({ escrow_status: 'released' }) // Signal to admin it's ready/released
+                        .eq("id", transaction.id)
+                }
             }
+        } else if (action === 'return_item') {
+            const { error: updateError } = await supabase
+                .from("krowba_links")
+                .update({
+                    shipping_status: 'returned',
+                    // returned_at: new Date().toISOString() // Add column if needed
+                })
+                .eq("id", linkId)
+
+            if (updateError) throw updateError
         }
 
         return NextResponse.json({ success: true })

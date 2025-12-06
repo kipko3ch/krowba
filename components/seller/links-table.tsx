@@ -132,9 +132,17 @@ export function LinksTable({ links }: LinksTableProps) {
                                     KES {(link.item_price + link.delivery_fee).toLocaleString()}
                                 </TableCell>
                                 <TableCell>
-                                    <Badge variant="outline" className={getStatusColor(link.status)}>
-                                        {link.status}
-                                    </Badge>
+                                    <div className="flex flex-col gap-1">
+                                        <Badge variant="outline" className={getStatusColor(link.status)}>
+                                            {link.status === 'sold' ? 'Paid' : link.status}
+                                        </Badge>
+                                        {link.status === 'sold' && (
+                                            <Badge variant="secondary" className="text-xs">
+                                                {link.shipping_status === 'shipped' ? 'Shipped' :
+                                                    link.shipping_status === 'delivered' ? 'Delivered' : 'Ready to Ship'}
+                                            </Badge>
+                                        )}
+                                    </div>
                                 </TableCell>
                                 <TableCell>
                                     {new Date(link.created_at).toLocaleDateString()}

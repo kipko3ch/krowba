@@ -15,7 +15,7 @@ export function DashboardStats({ links }: DashboardStatsProps) {
     const [viewMode, setViewMode] = useState<"stats" | "graph">("stats")
 
     const activeLinks = links.filter(l => l.status === "active")
-    const completedLinks = links.filter(l => l.status === "completed")
+    const completedLinks = links.filter(l => ["sold", "paid", "completed"].includes(l.status))
     const potentialValue = activeLinks.reduce((sum, link) => sum + link.item_price, 0)
 
     const graphData = useMemo(() => {

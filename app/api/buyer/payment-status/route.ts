@@ -32,6 +32,7 @@ export async function GET(request: NextRequest) {
           status: transaction.status,
           amount: transaction.amount,
           reference: reference,
+          link_short_code: transaction.krowba_links?.short_code
         },
       })
     }
@@ -62,6 +63,7 @@ export async function GET(request: NextRequest) {
           status: "completed",
           amount: transaction.amount,
           reference: reference,
+          link_short_code: transaction.krowba_links?.short_code
         },
       })
     }
