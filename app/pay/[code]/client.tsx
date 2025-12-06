@@ -1,7 +1,9 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Shield, ShieldCheck, Lock, CheckCircle2, Share2, User } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Shield, ShieldCheck, Lock, Share2, User, Loader2, CreditCard, Smartphone, Building2, Wallet } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { CometCard } from "@/components/ui/comet-card"
 import Image from "next/image"
@@ -36,6 +38,13 @@ export function LinkPageClient({ link }: LinkPageClientProps) {
     const [pinError, setPinError] = useState(false)
     const [unlocked, setUnlocked] = useState(!link.access_pin)
 
+    // Payment state
+    const [showPaymentForm, setShowPaymentForm] = useState(false)
+    const [buyerName, setBuyerName] = useState("")
+    const [buyerEmail, setBuyerEmail] = useState("")
+    const [buyerPhone, setBuyerPhone] = useState("")
+    const [isProcessing, setIsProcessing] = useState(false)
+
     const totalPrice = link.item_price + link.delivery_fee
     const depositAmount = link.escrow_mode === "split_risk" ? link.deposit_amount || link.delivery_fee : totalPrice
 
@@ -51,6 +60,52 @@ export function LinkPageClient({ link }: LinkPageClientProps) {
     const copyLink = () => {
         navigator.clipboard.writeText(window.location.href)
         toast.success("Link copied to clipboard")
+    }
+
+    const handlePayNow = async () => {
+        if (!buyerEmail) {
+            toast.error("Please enter your email address")
+            return
+        }
+
+        if (!buyerEmail.includes("@")) {
+            toast.error("Please enter a valid email address")
+            return
+        }
+
+        setIsProcessing(true)
+
+        try {
+            const response = await fetch("/api/buyer/pay", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    link_id: link.id,
+                    buyer_name: buyerName,
+                    buyer_email: buyerEmail,
+                    buyer_phone: buyerPhone,
+                    amount: depositAmount,
+                    payment_type: link.escrow_mode === "split_risk" ? "deposit" : "full",
+                }),
+            })
+
+            const result = await response.json()
+
+            if (!response.ok || !result.success) {
+                throw new Error(result.error || "Payment initiation failed")
+            }
+
+            // Redirect to Paystack checkout
+            if (result.data?.authorization_url) {
+                window.location.href = result.data.authorization_url
+            } else {
+                throw new Error("No payment URL received")
+            }
+        } catch (error) {
+            console.error("Payment error:", error)
+            toast.error(error instanceof Error ? error.message : "Payment failed. Please try again.")
+            setIsProcessing(false)
+        }
     }
 
     if (!unlocked) {
@@ -78,6 +133,138 @@ export function LinkPageClient({ link }: LinkPageClientProps) {
                         <Button onClick={handleUnlock} className="w-full h-12 bg-primary hover:bg-primary/90 text-black font-semibold">
                             Unlock
                         </Button>
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
+    // Payment Form Modal
+    if (showPaymentForm) {
+        return (
+            <div className="min-h-dvh bg-background flex items-center justify-center p-4">
+                <div className="max-w-md w-full">
+                    {/* Payment Card */}
+                    <div className="bg-card border border-border rounded-3xl overflow-hidden shadow-2xl">
+                        {/* Header with gradient */}
+                        <div className="relative bg-gradient-to-br from-primary via-primary/90 to-yellow-500 p-6 text-black">
+                            <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzBoLTZWMGg2djMwem0tNiAwaC02djYwaDZ2LTYweiIvPjwvZz48L2c+PC9zdmc+')] opacity-20" />
+                            <button
+                                onClick={() => setShowPaymentForm(false)}
+                                className="absolute top-4 right-4 p-2 hover:bg-black/10 rounded-full transition-colors"
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                            <div className="relative">
+                                <p className="text-sm font-medium opacity-80">You're paying for</p>
+                                <h2 className="text-xl font-bold mt-1 truncate">{link.item_name}</h2>
+                                <div className="mt-4 flex items-baseline gap-2">
+                                    <span className="text-3xl font-bold">KES {depositAmount?.toLocaleString()}</span>
+                                    {link.escrow_mode === "split_risk" && (
+                                        <span className="text-sm opacity-70">deposit</span>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Form */}
+                        <div className="p-6 space-y-5">
+                            <div className="space-y-2">
+                                <Label htmlFor="name" className="text-sm font-medium">Your Name</Label>
+                                <Input
+                                    id="name"
+                                    placeholder="John Doe"
+                                    value={buyerName}
+                                    onChange={(e) => setBuyerName(e.target.value)}
+                                    className="h-12 rounded-xl"
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="email" className="text-sm font-medium">Email Address *</Label>
+                                <Input
+                                    id="email"
+                                    type="email"
+                                    placeholder="you@example.com"
+                                    value={buyerEmail}
+                                    onChange={(e) => setBuyerEmail(e.target.value)}
+                                    required
+                                    className="h-12 rounded-xl"
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="phone" className="text-sm font-medium">Phone Number</Label>
+                                <Input
+                                    id="phone"
+                                    type="tel"
+                                    placeholder="+254 7XX XXX XXX"
+                                    value={buyerPhone}
+                                    onChange={(e) => setBuyerPhone(e.target.value)}
+                                    className="h-12 rounded-xl"
+                                />
+                            </div>
+
+                            {/* Payment Methods */}
+                            <div className="pt-2">
+                                <p className="text-xs font-medium text-muted-foreground mb-3">PAYMENT METHODS</p>
+                                <div className="flex items-center gap-3 flex-wrap">
+                                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-muted rounded-full text-xs">
+                                        <CreditCard className="w-3.5 h-3.5" />
+                                        <span>Card</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-muted rounded-full text-xs">
+                                        <Smartphone className="w-3.5 h-3.5" />
+                                        <span>M-Pesa</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-muted rounded-full text-xs">
+                                        <Building2 className="w-3.5 h-3.5" />
+                                        <span>Bank</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-muted rounded-full text-xs">
+                                        <Wallet className="w-3.5 h-3.5" />
+                                        <span>USSD</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Pay Button */}
+                            <Button
+                                onClick={handlePayNow}
+                                disabled={isProcessing}
+                                className="w-full h-14 bg-primary hover:bg-primary/90 text-black font-bold text-base rounded-xl shadow-lg shadow-primary/25 transition-all hover:shadow-xl hover:shadow-primary/30"
+                            >
+                                {isProcessing ? (
+                                    <>
+                                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                                        Processing...
+                                    </>
+                                ) : (
+                                    <>Pay KES {depositAmount?.toLocaleString()}</>
+                                )}
+                            </Button>
+
+                            {/* Security Badge */}
+                            <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground pt-2">
+                                <Lock className="w-3.5 h-3.5" />
+                                <span>Secured by Paystack • 256-bit SSL encryption</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Escrow Info */}
+                    <div className="mt-4 p-4 bg-primary/5 border border-primary/20 rounded-xl">
+                        <div className="flex items-start gap-3">
+                            <ShieldCheck className="w-5 h-5 text-primary mt-0.5" />
+                            <div>
+                                <p className="font-semibold text-sm text-primary">Your payment is protected</p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    Funds are held securely until you confirm delivery. If something goes wrong, you're covered.
+                                </p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -177,13 +364,26 @@ export function LinkPageClient({ link }: LinkPageClientProps) {
                             )}
                         </div>
 
-                        {/* Price */}
-                        <div className="text-2xl font-bold">
-                            KES {totalPrice.toLocaleString()}
+                        {/* Price Breakdown */}
+                        <div className="space-y-2 p-4 bg-muted/50 rounded-xl">
+                            <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">Item Price</span>
+                                <span>KES {Number(link.item_price).toLocaleString()}</span>
+                            </div>
+                            {link.delivery_fee > 0 && (
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-muted-foreground">Delivery Fee</span>
+                                    <span>KES {Number(link.delivery_fee).toLocaleString()}</span>
+                                </div>
+                            )}
+                            <div className="flex justify-between font-bold text-lg pt-2 border-t border-border">
+                                <span>Total</span>
+                                <span>KES {totalPrice.toLocaleString()}</span>
+                            </div>
                         </div>
 
                         {/* Escrow Protection */}
-                        <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 space-y-2">
+                        <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 space-y-2">
                             <div className="flex items-center gap-2 text-primary">
                                 <ShieldCheck className="w-5 h-5" />
                                 <span className="font-semibold text-sm">
@@ -192,15 +392,21 @@ export function LinkPageClient({ link }: LinkPageClientProps) {
                             </div>
                             <p className="text-xs text-muted-foreground leading-relaxed">
                                 {link.escrow_mode === "full_escrow"
-                                    ? "Payment held securely until delivery confirmed."
-                                    : `Pay ${depositAmount?.toLocaleString()} KES deposit now, rest on delivery.`
+                                    ? "Your payment is held securely until you confirm delivery. 100% buyer protection."
+                                    : `Pay KES ${depositAmount?.toLocaleString()} deposit now. The rest (KES ${(totalPrice - (depositAmount || 0)).toLocaleString()}) on delivery.`
                                 }
                             </p>
                         </div>
 
                         {/* CTA Button */}
-                        <Button className="w-full h-12 bg-primary hover:bg-primary/90 text-black font-semibold rounded-lg">
-                            Pay {depositAmount?.toLocaleString()} KES
+                        <Button
+                            onClick={() => setShowPaymentForm(true)}
+                            className="w-full h-14 bg-primary hover:bg-primary/90 text-black font-bold text-base rounded-xl shadow-lg shadow-primary/25 transition-all hover:shadow-xl hover:shadow-primary/30 hover:scale-[1.02]"
+                        >
+                            {link.escrow_mode === "split_risk"
+                                ? `Pay KES ${depositAmount?.toLocaleString()} Deposit`
+                                : `Pay KES ${totalPrice.toLocaleString()}`
+                            }
                         </Button>
 
                         {/* Seller Info */}
