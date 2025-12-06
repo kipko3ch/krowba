@@ -22,14 +22,12 @@ import {
     XCircle
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import confetti from "canvas-confetti"
 
 interface PaymentPageClientProps {
     link: any
-    seller: any
 }
 
-export default function PaymentPageClient({ link, seller }: PaymentPageClientProps) {
+export default function PaymentPageClient({ link }: PaymentPageClientProps) {
     const router = useRouter()
     const [accessPin, setAccessPin] = useState("")
     const [isUnlocked, setIsUnlocked] = useState(false)
@@ -106,6 +104,9 @@ export default function PaymentPageClient({ link, seller }: PaymentPageClientPro
             if (!response.ok) throw new Error("Failed to confirm delivery")
 
             setOrderStatus('delivered')
+
+            // Dynamic import for confetti to avoid SSR issues
+            const confetti = (await import("canvas-confetti")).default
             confetti({
                 particleCount: 100,
                 spread: 70,
