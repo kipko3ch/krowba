@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { notFound } from "next/navigation"
 import { Metadata } from "next"
-import { LinkPageClient } from "./client"
+import LinkPageClient from "./client"
 
 interface Props {
     params: Promise<{ code: string }>
