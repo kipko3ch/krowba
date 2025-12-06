@@ -102,7 +102,7 @@
   --font-sans: var(--font-roboto), 'Geist Mono', 'Geist Mono Fallback';
   --font-display: var(--font-hedvig-sans), sans-serif;
   --font-serif-display: var(--font-hedvig), serif;
-  --font-mono: 'Geist Mono', 'Geist Mono Fallback';
+  --font-serif-display: var(--font-hedvig), serif;
   --color-primary-dim: #36c919;
   --color-royal-blue: #002366;
   /* computed shadow variables below - do not modify */

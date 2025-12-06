@@ -47,7 +47,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${geistMono.className} ${roboto.variable} ${hedvigLettersSerif.variable} ${hedvigLettersSans.variable} font-sans antialiased`}>
+      <body className={`${roboto.variable} ${hedvigLettersSerif.variable} ${hedvigLettersSans.variable} font-sans antialiased`}>
         {children}
         <Toaster
           richColors

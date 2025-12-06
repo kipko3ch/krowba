@@ -156,13 +156,14 @@ export default function HomePage() {
             {[
               { label: 'How It Works', href: '#how-it-works' },
               { label: 'Pricing', href: '#pricing' },
-              { label: 'Join Waitlist', href: '#founding-100' }
+              { label: 'Join Waitlist', href: '#founding-100' },
+              { label: 'Login', href: '/login' }
             ].map((item, idx) => (
               <motion.a
                 key={idx}
                 onClick={() => setMobileMenuOpen(false)}
                 href={item.href}
-                className="text-3xl font-serif-display text-gray-900"
+                className={`font-serif-display text-gray-900 ${item.label === 'Login' ? 'text-4xl font-bold text-primary mt-4' : 'text-3xl'}`}
                 variants={mobileItemVariants}
                 whileHover={{ scale: 1.05, color: "#44F91F" }}
               >
