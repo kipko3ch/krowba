@@ -2,11 +2,13 @@ import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import { paystack } from "@/lib/services/paystack"
 
-// Use service role for webhook operations (bypasses RLS)
-const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+// Lazy initialization to avoid build-time errors
+const getSupabaseAdmin = () => {
+    return createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+}
 
 // Paystack webhook events
 type PaystackEvent = {
@@ -77,7 +79,8 @@ export async function POST(request: NextRequest) {
 
 // Handle successful payment - CREATE ESCROW HOLD
 async function handleChargeSuccess(data: PaystackEvent["data"]) {
-    const { reference, amount, customer, metadata, authorization } = data
+    const { reference, amount, customer, authorization } = data
+    const supabaseAdmin = getSupabaseAdmin()
 
     // Find the transaction by reference
     const { data: transaction, error: txError } = await supabaseAdmin
@@ -109,7 +112,7 @@ async function handleChargeSuccess(data: PaystackEvent["data"]) {
         seller_id: transaction.seller_id,
         amount: transaction.amount,
         currency: "KES",
-        status: "held", // CRITICAL: Not released until AI verification
+        status: "held",
     })
 
     // Update link status to "paid"
@@ -139,6 +142,7 @@ async function handleChargeSuccess(data: PaystackEvent["data"]) {
 // Handle successful transfer (payout to seller)
 async function handleTransferSuccess(data: PaystackEvent["data"]) {
     const { reference, transfer_code } = data
+    const supabaseAdmin = getSupabaseAdmin()
 
     // Find escrow by transfer reference
     const { data: escrow } = await supabaseAdmin
@@ -174,6 +178,7 @@ async function handleTransferSuccess(data: PaystackEvent["data"]) {
 // Handle failed transfer
 async function handleTransferFailed(data: PaystackEvent["data"]) {
     const { reference } = data
+    const supabaseAdmin = getSupabaseAdmin()
 
     const { data: escrow } = await supabaseAdmin
         .from("escrow_holds")
@@ -198,6 +203,7 @@ async function handleTransferFailed(data: PaystackEvent["data"]) {
 // Handle refund processed
 async function handleRefundProcessed(data: PaystackEvent["data"]) {
     const { reference } = data
+    const supabaseAdmin = getSupabaseAdmin()
 
     // Find transaction by reference
     const { data: transaction } = await supabaseAdmin

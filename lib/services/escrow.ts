@@ -4,7 +4,13 @@
 import { createClient } from "@supabase/supabase-js"
 import { paystack } from "@/lib/services/paystack"
 
-const supabaseAdmin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+// Lazy initialization to avoid build-time errors
+const getSupabaseAdmin = () => {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error("Supabase environment variables not configured")
+  }
+  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
+}
 
 export interface EscrowAction {
   success: boolean
@@ -18,7 +24,7 @@ export class EscrowService {
   async releaseFunds(transactionId: string): Promise<EscrowAction> {
     try {
       // Fetch escrow hold
-      const { data: escrow, error: escrowError } = await supabaseAdmin
+      const { data: escrow, error: escrowError } = await getSupabaseAdmin()
         .from("escrow_holds")
         .select("*, transactions(*), krowba_links(*)")
         .eq("transaction_id", transactionId)
@@ -37,7 +43,7 @@ export class EscrowService {
       }
 
       // Get seller's bank account
-      const { data: bankAccount } = await supabaseAdmin
+      const { data: bankAccount } = await getSupabaseAdmin()
         .from("seller_bank_accounts")
         .select("*")
         .eq("seller_id", escrow.seller_id)
@@ -48,7 +54,7 @@ export class EscrowService {
         // If no bank account linked, just mark as released (manual payout)
         console.log("[Escrow] No bank account linked - marking as released for manual payout")
 
-        await supabaseAdmin
+        await getSupabaseAdmin()
           .from("escrow_holds")
           .update({
             status: "released",
@@ -56,7 +62,7 @@ export class EscrowService {
           })
           .eq("id", escrow.id)
 
-        await supabaseAdmin.from("krowba_links").update({ status: "completed" }).eq("id", escrow.krowba_link_id)
+        await getSupabaseAdmin().from("krowba_links").update({ status: "completed" }).eq("id", escrow.krowba_link_id)
 
         return {
           success: true,
@@ -83,7 +89,7 @@ export class EscrowService {
       }
 
       // Update escrow with transfer reference (wait for webhook to confirm)
-      await supabaseAdmin
+      await getSupabaseAdmin()
         .from("escrow_holds")
         .update({
           transfer_reference: transferRef,
@@ -112,7 +118,7 @@ export class EscrowService {
   async refundBuyer(transactionId: string, reason: string): Promise<EscrowAction> {
     try {
       // Fetch escrow hold
-      const { data: escrow, error: escrowError } = await supabaseAdmin
+      const { data: escrow, error: escrowError } = await getSupabaseAdmin()
         .from("escrow_holds")
         .select("*, transactions(*), krowba_links(*)")
         .eq("transaction_id", transactionId)
@@ -131,7 +137,7 @@ export class EscrowService {
       }
 
       // Update escrow status
-      await supabaseAdmin
+      await getSupabaseAdmin()
         .from("escrow_holds")
         .update({
           status: "refunded",
@@ -140,10 +146,10 @@ export class EscrowService {
         .eq("id", escrow.id)
 
       // Update transaction
-      await supabaseAdmin.from("transactions").update({ status: "refunded" }).eq("id", transactionId)
+      await getSupabaseAdmin().from("transactions").update({ status: "refunded" }).eq("id", transactionId)
 
       // Update link status
-      await supabaseAdmin.from("krowba_links").update({ status: "cancelled" }).eq("id", escrow.krowba_link_id)
+      await getSupabaseAdmin().from("krowba_links").update({ status: "cancelled" }).eq("id", escrow.krowba_link_id)
 
       console.log(`[Escrow] Refunded ${escrow.amount} to buyer (reason: ${reason})`)
 
@@ -168,7 +174,7 @@ export class EscrowService {
   async autoRelease(transactionId: string): Promise<EscrowAction> {
     try {
       // Check shipping proof exists and is old enough
-      const { data: proof, error: proofError } = await supabaseAdmin
+      const { data: proof, error: proofError } = await getSupabaseAdmin()
         .from("shipping_proofs")
         .select("*, transactions(*), escrow_holds(*)")
         .eq("transaction_id", transactionId)
@@ -190,7 +196,7 @@ export class EscrowService {
       }
 
       // Check if buyer has confirmed
-      const { data: confirmation } = await supabaseAdmin
+      const { data: confirmation } = await getSupabaseAdmin()
         .from("delivery_confirmations")
         .select("confirmed")
         .eq("transaction_id", transactionId)
@@ -201,7 +207,7 @@ export class EscrowService {
       }
 
       // Check if there's a dispute
-      const { data: dispute } = await supabaseAdmin
+      const { data: dispute } = await getSupabaseAdmin()
         .from("disputes")
         .select("id, resolution")
         .eq("transaction_id", transactionId)
@@ -212,7 +218,7 @@ export class EscrowService {
       }
 
       // Proceed with auto-release
-      await supabaseAdmin
+      await getSupabaseAdmin()
         .from("delivery_confirmations")
         .update({
           confirmed: true,
@@ -239,7 +245,7 @@ export class EscrowService {
     partialAmount?: number,
   ): Promise<EscrowAction> {
     try {
-      const { data: dispute, error: disputeError } = await supabaseAdmin
+      const { data: dispute, error: disputeError } = await getSupabaseAdmin()
         .from("disputes")
         .select("*, transactions(*), escrow_holds(*)")
         .eq("id", disputeId)
@@ -250,7 +256,7 @@ export class EscrowService {
       }
 
       // Update dispute resolution
-      await supabaseAdmin
+      await getSupabaseAdmin()
         .from("disputes")
         .update({
           resolution,
@@ -271,7 +277,7 @@ export class EscrowService {
         // In production: refund partialAmount to buyer, release rest to seller
         console.log(`[Escrow] Partial refund: ${partialAmount} to buyer, rest to seller`)
 
-        await supabaseAdmin
+        await getSupabaseAdmin()
           .from("escrow_holds")
           .update({
             status: "released",
@@ -303,7 +309,7 @@ export class EscrowService {
       const cutoffDate = new Date()
       cutoffDate.setHours(cutoffDate.getHours() - hoursOld)
 
-      const { data: staleEscrows } = await supabaseAdmin
+      const { data: staleEscrows } = await getSupabaseAdmin()
         .from("escrow_holds")
         .select(`
           transaction_id,
@@ -323,3 +329,4 @@ export class EscrowService {
 }
 
 export const escrowService = new EscrowService()
+

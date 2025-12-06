@@ -2,8 +2,8 @@ import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import { payhero } from "@/lib/services/payhero"
 
-// Use service role for webhook operations (bypasses RLS)
-const supabaseAdmin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+// Lazy initialization to avoid build-time errors
+const getSupabaseAdmin = () => createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Find the transaction
-    const { data: transaction, error: txError } = await supabaseAdmin
+    const { data: transaction, error: txError } = await getSupabaseAdmin()
       .from("transactions")
       .select("*, krowba_links(*)")
       .eq("payment_reference", external_reference)
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Update transaction
-    await supabaseAdmin
+    await getSupabaseAdmin()
       .from("transactions")
       .update({
         status: newStatus,
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
     // If payment successful, create escrow hold and update link status
     if (newStatus === "completed") {
       // Create escrow hold
-      await supabaseAdmin.from("escrow_holds").insert({
+      await getSupabaseAdmin().from("escrow_holds").insert({
         transaction_id: transaction.id,
         krowba_link_id: transaction.krowba_link_id,
         seller_id: transaction.seller_id,
@@ -73,11 +73,11 @@ export async function POST(request: NextRequest) {
       })
 
       // Update link status to "paid"
-      await supabaseAdmin.from("krowba_links").update({ status: "paid" }).eq("id", transaction.krowba_link_id)
+      await getSupabaseAdmin().from("krowba_links").update({ status: "paid" }).eq("id", transaction.krowba_link_id)
 
       // Create delivery confirmation record for buyer
       const confirmationCode = Math.random().toString(36).substring(2, 8).toUpperCase()
-      await supabaseAdmin.from("delivery_confirmations").insert({
+      await getSupabaseAdmin().from("delivery_confirmations").insert({
         transaction_id: transaction.id,
         krowba_link_id: transaction.krowba_link_id,
         buyer_phone: transaction.buyer_phone,
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
       })
 
       // Update seller stats
-      await supabaseAdmin.rpc("increment_seller_transactions", {
+      await getSupabaseAdmin().rpc("increment_seller_transactions", {
         seller_id: transaction.seller_id,
       })
     }
@@ -97,3 +97,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Webhook processing failed" }, { status: 500 })
   }
 }
+
