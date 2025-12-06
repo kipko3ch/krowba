@@ -698,7 +698,7 @@ export function CreateLinkWizard() {
                         </Button>
                         <Button
                             onClick={() => setStep(4)}
-                            disabled={!itemPrice || !accessPin}
+                            disabled={!itemPrice}
                             className="rounded-full px-8 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg shadow-primary/20 transition-all hover:scale-105"
                         >
                             Next <ArrowRight className="ml-2 h-4 w-4" />
