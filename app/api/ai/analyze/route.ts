@@ -158,6 +158,88 @@ Prices in KES. Return ONLY valid JSON.`
 
     } catch (apiError: any) {
       console.error("❌ Gemini API Error:", apiError.message)
+
+      // Fallback to Groq if Gemini fails (Rate limit or other error)
+      const groqKey = process.env.GROQ_API_KEY
+      if (groqKey) {
+        console.log("⚠️ Switching to Groq fallback...")
+        try {
+          // Groq OpenAI-compatible endpoint
+          const groqResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${groqKey}`,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              model: "meta-llama/llama-4-maverick-17b-128e-instruct", // User specified model
+              messages: [
+                {
+                  role: "user",
+                  content: [
+                    { type: "text", text: prompt },
+                    {
+                      type: "image_url",
+                      image_url: {
+                        url: `data:${mimeType};base64,${base64Image}`
+                      }
+                    }
+                  ]
+                }
+              ],
+              temperature: 0.2,
+              max_tokens: 1024,
+              response_format: { type: "json_object" } // Groq supports JSON mode
+            })
+          })
+
+          if (!groqResponse.ok) {
+            const err = await groqResponse.json()
+            console.error("❌ Groq Error:", err)
+            throw new Error(err.error?.message || "Groq API failed")
+          }
+
+          const groqResult = await groqResponse.json()
+          const groqText = groqResult.choices[0]?.message?.content
+
+          if (!groqText) throw new Error("No content from Groq")
+
+          console.log("📥 Groq Response:", groqText.substring(0, 200))
+
+          // Parse JSON from Groq response
+          let analysisData
+          try {
+            let cleanedContent = groqText
+              .replace(/```json\s*/gi, "")
+              .replace(/```\s*/gi, "")
+              .trim()
+
+            const jsonMatch = cleanedContent.match(/\{[\s\S]*\}/)
+            if (jsonMatch) {
+              cleanedContent = jsonMatch[0]
+            }
+            analysisData = JSON.parse(cleanedContent)
+          } catch (e) {
+            console.error("❌ Failed to parse Groq JSON")
+            throw e
+          }
+
+          return NextResponse.json({
+            success: true,
+            data: analysisData,
+            source: "groq"
+          })
+
+        } catch (groqError: any) {
+          console.error("❌ Groq Fallback Failed:", groqError.message)
+          // Return original Gemini error if fallback also fails
+          return NextResponse.json({
+            success: false,
+            error: apiError.message || "AI analysis failed (Gemini & Groq)"
+          }, { status: 500 })
+        }
+      }
+
       return NextResponse.json({
         success: false,
         error: apiError.message || "AI analysis failed"
