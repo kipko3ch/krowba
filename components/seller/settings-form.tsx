@@ -8,8 +8,10 @@ import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
-import { Loader2, LogOut } from "lucide-react"
+import { Loader2, LogOut, User, Building2, Phone, Mail, TrendingUp } from "lucide-react"
 import type { Seller } from "@/types"
 
 interface SettingsFormProps {
@@ -20,6 +22,7 @@ interface SettingsFormProps {
 export function SettingsForm({ seller, userEmail }: SettingsFormProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
+  const [isSigningOut, setIsSigningOut] = useState(false)
 
   const [formData, setFormData] = useState({
     business_name: seller?.business_name || "",
@@ -53,89 +56,177 @@ export function SettingsForm({ seller, userEmail }: SettingsFormProps) {
   }
 
   const handleSignOut = async () => {
+    setIsSigningOut(true)
     const supabase = createClient()
     await supabase.auth.signOut()
     router.push("/")
   }
 
   return (
-    <div className="space-y-8">
-      {/* Business Profile */}
-      <form onSubmit={handleSubmit} className="border border-border p-6 space-y-4">
-        <h2 className="font-semibold">Business Profile</h2>
+    <div className="space-y-6">
+      {/* Profile Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Business Profile</CardTitle>
+          <CardDescription>
+            Manage your business information and contact details
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email" className="flex items-center gap-2">
+                  <Mail className="h-4 w-4 text-muted-foreground" />
+                  Email Address
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={userEmail}
+                  disabled
+                  className="bg-muted/50"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Your email address is managed by your account and cannot be changed here
+                </p>
+              </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
-          <Input id="email" type="email" value={userEmail} disabled className="bg-secondary/30" />
-          <p className="text-xs text-muted-foreground">Email cannot be changed</p>
-        </div>
+              <Separator />
 
-        <div className="space-y-2">
-          <Label htmlFor="business_name">Business Name</Label>
-          <Input
-            id="business_name"
-            value={formData.business_name}
-            onChange={(e) => setFormData({ ...formData, business_name: e.target.value })}
-          />
-        </div>
+              <div className="space-y-2">
+                <Label htmlFor="business_name" className="flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                  Business Name
+                </Label>
+                <Input
+                  id="business_name"
+                  placeholder="Enter your business name"
+                  value={formData.business_name}
+                  onChange={(e) => setFormData({ ...formData, business_name: e.target.value })}
+                  required
+                />
+              </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="phone">Phone Number</Label>
-          <Input
-            id="phone"
-            value={formData.phone}
-            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-          />
-        </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone" className="flex items-center gap-2">
+                  <Phone className="h-4 w-4 text-muted-foreground" />
+                  Phone Number
+                </Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  placeholder="254712345678"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  required
+                />
+                <p className="text-xs text-muted-foreground">
+                  Used for customer communication and account recovery
+                </p>
+              </div>
+            </div>
 
-        <Button type="submit" disabled={isLoading}>
-          {isLoading ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            "Save Changes"
-          )}
-        </Button>
-      </form>
+            <div className="flex items-center justify-between pt-4 border-t">
+              <p className="text-sm text-muted-foreground">
+                Make sure your information is up to date
+              </p>
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save Changes"
+                )}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
 
-      {/* Account Stats */}
-      <div className="border border-border p-6">
-        <h2 className="font-semibold mb-4">Account Statistics</h2>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <div className="text-sm text-muted-foreground">Total Transactions</div>
-            <div className="text-2xl font-bold">{seller?.total_transactions || 0}</div>
-          </div>
-          <div>
-            <div className="text-sm text-muted-foreground">Successful</div>
-            <div className="text-2xl font-bold">{seller?.successful_transactions || 0}</div>
-          </div>
-          <div>
-            <div className="text-sm text-muted-foreground">Success Rate</div>
-            <div className="text-2xl font-bold">
-              {seller && seller.total_transactions > 0
-                ? Math.round((seller.successful_transactions / seller.total_transactions) * 100)
-                : 100}
-              %
+      {/* Account Statistics */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5" />
+            Account Statistics
+          </CardTitle>
+          <CardDescription>
+            Your performance and trust metrics
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="space-y-1">
+              <div className="text-sm text-muted-foreground">Total Transactions</div>
+              <div className="text-2xl font-bold">{seller?.total_transactions || 0}</div>
+            </div>
+            <div className="space-y-1">
+              <div className="text-sm text-muted-foreground">Successful</div>
+              <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                {seller?.successful_transactions || 0}
+              </div>
+            </div>
+            <div className="space-y-1">
+              <div className="text-sm text-muted-foreground">Success Rate</div>
+              <div className="text-2xl font-bold">
+                {seller && seller.total_transactions > 0
+                  ? Math.round((seller.successful_transactions / seller.total_transactions) * 100)
+                  : 100}
+                %
+              </div>
+            </div>
+            <div className="space-y-1">
+              <div className="text-sm text-muted-foreground">Trust Score</div>
+              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                {seller?.verification_score || 0}
+              </div>
             </div>
           </div>
-          <div>
-            <div className="text-sm text-muted-foreground">Trust Score</div>
-            <div className="text-2xl font-bold">{seller?.verification_score || 0}</div>
-          </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
-      {/* Danger Zone */}
-      <div className="border border-destructive/50 p-6">
-        <h2 className="font-semibold mb-4 text-destructive">Danger Zone</h2>
-        <Button variant="destructive" onClick={handleSignOut}>
-          <LogOut className="h-4 w-4 mr-2" />
-          Sign Out
-        </Button>
-      </div>
+      {/* Account Actions */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <User className="h-5 w-5" />
+            Account
+          </CardTitle>
+          <CardDescription>
+            Manage your account settings and session
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between p-4 rounded-lg border">
+            <div>
+              <h3 className="font-medium">Sign Out</h3>
+              <p className="text-sm text-muted-foreground">
+                End your current session and return to the home page
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              onClick={handleSignOut}
+              disabled={isSigningOut}
+            >
+              {isSigningOut ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Signing out...
+                </>
+              ) : (
+                <>
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sign Out
+                </>
+              )}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

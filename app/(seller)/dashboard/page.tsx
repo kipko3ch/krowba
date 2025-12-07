@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button"
 import { DashboardStats } from "@/components/seller/dashboard-stats"
 import { LinksTable } from "@/components/seller/links-table"
 import { Greeting } from "@/components/seller/greeting"
-import { EarningsOverview } from "@/components/seller/earnings-overview"
 import { Plus, ArrowRight } from "lucide-react"
 
 export default async function DashboardPage() {
@@ -46,11 +45,6 @@ export default async function DashboardPage() {
                         Create Link
                     </Button>
                 </Link>
-            </div>
-
-            {/* Earnings Overview */}
-            <div className="mb-8">
-                <EarningsOverview />
             </div>
 
             {/* Stats & Graph */}

@@ -151,7 +151,7 @@ export function DashboardStats({ links }: DashboardStatsProps) {
                                 <DollarSign className="h-4 w-4 text-[#fbbf24]" />
                             </CardHeader>
                             <CardContent className="p-4 pt-0 md:p-6 md:pt-0">
-                                <div className="text-2xl md:text-3xl font-bold text-foreground truncate">K{potentialValue >= 1000 ? (potentialValue / 1000).toFixed(0) + 'k' : potentialValue}</div>
+                                <div className="text-2xl md:text-3xl font-bold text-foreground truncate">KSH {potentialValue >= 1000 ? (potentialValue / 1000).toFixed(0) + 'k' : potentialValue.toLocaleString()}</div>
                                 <p className="text-xs text-muted-foreground mt-1 hidden md:block">
                                     Expected revenue
                                 </p>

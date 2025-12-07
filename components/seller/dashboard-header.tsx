@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { User, LogOut, Settings, LayoutDashboard, LinkIcon, Package, Menu, Plus, Wallet } from "lucide-react"
+import { User, LogOut, Settings, LayoutDashboard, LinkIcon, Package, Menu, Plus, Wallet, Loader2 } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
 import type { Seller } from "@/types"
@@ -23,11 +23,29 @@ interface DashboardHeaderProps {
 
 export function DashboardHeader({ seller }: DashboardHeaderProps) {
   const router = useRouter()
+  const pathname = usePathname()
   const [mounted, setMounted] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const [isNavigating, setIsNavigating] = useState(false)
 
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  // Reset navigating state when pathname changes
+  useEffect(() => {
+    setIsNavigating(false)
+  }, [pathname])
+
+  const handleNavClick = (href: string) => {
+    if (href !== pathname) {
+      setIsNavigating(true)
+      setMobileOpen(false)
+      router.push(href)
+    } else {
+      setMobileOpen(false)
+    }
+  }
 
   const handleSignOut = async () => {
     const supabase = createClient()
@@ -42,7 +60,7 @@ export function DashboardHeader({ seller }: DashboardHeaderProps) {
           {/* Mobile Menu */}
           <div className="md:hidden">
             {mounted && (
-              <Sheet>
+              <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
                 <SheetTrigger asChild>
                   <Button variant="ghost" size="icon" className="-ml-2">
                     <Menu className="h-5 w-5" />
@@ -67,48 +85,73 @@ export function DashboardHeader({ seller }: DashboardHeaderProps) {
 
                     {/* Navigation */}
                     <nav className="flex-1 p-4 space-y-1">
-                      <Link
-                        href="/dashboard"
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors"
+                      <button
+                        onClick={() => handleNavClick("/dashboard")}
+                        disabled={isNavigating}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors w-full text-left disabled:opacity-50"
                       >
-                        <LayoutDashboard className="h-5 w-5" />
+                        {isNavigating && pathname !== "/dashboard" ? (
+                          <Loader2 className="h-5 w-5 animate-spin" />
+                        ) : (
+                          <LayoutDashboard className="h-5 w-5" />
+                        )}
                         Dashboard
-                      </Link>
-                      <Link
-                        href="/dashboard/links"
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors"
+                      </button>
+                      <button
+                        onClick={() => handleNavClick("/dashboard/links")}
+                        disabled={isNavigating}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors w-full text-left disabled:opacity-50"
                       >
-                        <LinkIcon className="h-5 w-5" />
+                        {isNavigating && pathname !== "/dashboard/links" ? (
+                          <Loader2 className="h-5 w-5 animate-spin" />
+                        ) : (
+                          <LinkIcon className="h-5 w-5" />
+                        )}
                         My Links
-                      </Link>
-                      <Link
-                        href="/dashboard/transactions"
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors"
+                      </button>
+                      <button
+                        onClick={() => handleNavClick("/dashboard/transactions")}
+                        disabled={isNavigating}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors w-full text-left disabled:opacity-50"
                       >
-                        <Package className="h-5 w-5" />
+                        {isNavigating && pathname !== "/dashboard/transactions" ? (
+                          <Loader2 className="h-5 w-5 animate-spin" />
+                        ) : (
+                          <Package className="h-5 w-5" />
+                        )}
                         Transactions
-                      </Link>
-                      <Link
-                        href="/dashboard/payouts"
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors"
+                      </button>
+                      <button
+                        onClick={() => handleNavClick("/dashboard/payouts")}
+                        disabled={isNavigating}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors w-full text-left disabled:opacity-50"
                       >
-                        <Wallet className="h-5 w-5" />
+                        {isNavigating && pathname !== "/dashboard/payouts" ? (
+                          <Loader2 className="h-5 w-5 animate-spin" />
+                        ) : (
+                          <Wallet className="h-5 w-5" />
+                        )}
                         Payouts
-                      </Link>
+                      </button>
                     </nav>
 
                     {/* Footer Actions */}
                     <div className="p-4 border-t space-y-2">
-                      <Link
-                        href="/dashboard/settings"
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors text-muted-foreground"
+                      <button
+                        onClick={() => handleNavClick("/dashboard/settings")}
+                        disabled={isNavigating}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors text-muted-foreground w-full text-left disabled:opacity-50"
                       >
-                        <Settings className="h-5 w-5" />
+                        {isNavigating && pathname !== "/dashboard/settings" ? (
+                          <Loader2 className="h-5 w-5 animate-spin" />
+                        ) : (
+                          <Settings className="h-5 w-5" />
+                        )}
                         Settings
-                      </Link>
+                      </button>
                       <button
                         onClick={handleSignOut}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-destructive/10 hover:text-destructive transition-colors text-muted-foreground w-full"
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors text-muted-foreground w-full text-left"
                       >
                         <LogOut className="h-5 w-5" />
                         Sign Out
