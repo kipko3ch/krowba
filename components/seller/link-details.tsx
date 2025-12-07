@@ -88,12 +88,14 @@ export function LinkDetails({ link, transactions, escrowHolds, shippingProofs }:
                         <QrCode className="h-4 w-4 mr-2" />
                         QR Code
                     </Button>
-                    <Link href={`/dashboard/links/${link.short_code}/edit`}>
-                        <Button variant="outline" size="sm" className="border-gray-700 text-gray-300 hover:bg-gray-800">
-                            <Edit className="h-4 w-4 mr-2" />
-                            Edit
-                        </Button>
-                    </Link>
+                    {!(link.status === 'sold' && link.shipping_status === 'delivered') && (
+                        <Link href={`/dashboard/links/${link.short_code}/edit`}>
+                            <Button variant="outline" size="sm" className="border-gray-700 text-gray-300 hover:bg-gray-800">
+                                <Edit className="h-4 w-4 mr-2" />
+                                Edit
+                            </Button>
+                        </Link>
+                    )}
                     <Link href={`/pay/${link.short_code}`} target="_blank">
                         <Button size="sm" className="bg-[#44f91f] hover:bg-[#3de018] text-black font-bold">
                             <ExternalLink className="h-4 w-4 mr-2" />
@@ -102,6 +104,73 @@ export function LinkDetails({ link, transactions, escrowHolds, shippingProofs }:
                     </Link>
                 </div>
             </div>
+
+            {/* Sold/Shipped Banner */}
+            {link.status === 'sold' && (
+                <div className={`border rounded-xl p-4 flex items-center gap-4 animate-in fade-in slide-in-from-top-4 ${link.shipping_status === 'delivered'
+                    ? 'bg-blue-500/10 border-blue-500/20'
+                    : link.shipping_status === 'shipped'
+                        ? 'bg-purple-500/10 border-purple-500/20'
+                        : 'bg-green-500/10 border-green-500/20'
+                    }`}>
+                    <div className={`h-12 w-12 rounded-full flex items-center justify-center flex-shrink-0 ${link.shipping_status === 'delivered'
+                        ? 'bg-blue-500/20'
+                        : link.shipping_status === 'shipped'
+                            ? 'bg-purple-500/20'
+                            : 'bg-green-500/20'
+                        }`}>
+                        {link.shipping_status === 'delivered' ? (
+                            <CheckCircle2 className="h-6 w-6 text-blue-500" />
+                        ) : link.shipping_status === 'shipped' ? (
+                            <Truck className="h-6 w-6 text-purple-500" />
+                        ) : (
+                            <CheckCircle2 className="h-6 w-6 text-green-500" />
+                        )}
+                    </div>
+                    <div>
+                        <h3 className={`text-lg font-bold ${link.shipping_status === 'delivered'
+                            ? 'text-blue-500'
+                            : link.shipping_status === 'shipped'
+                                ? 'text-purple-500'
+                                : 'text-green-500'
+                            }`}>
+                            {link.shipping_status === 'delivered'
+                                ? 'Order Completed'
+                                : link.shipping_status === 'shipped'
+                                    ? 'Item Shipped'
+                                    : 'Item Sold!'}
+                        </h3>
+                        <p className={`text-sm ${link.shipping_status === 'delivered'
+                            ? 'text-blue-600/80 dark:text-blue-400/80'
+                            : link.shipping_status === 'shipped'
+                                ? 'text-purple-600/80 dark:text-purple-400/80'
+                                : 'text-green-600/80 dark:text-green-400/80'
+                            }`}>
+                            {link.shipping_status === 'delivered'
+                                ? 'The buyer has confirmed receipt. Funds have been released.'
+                                : link.shipping_status === 'shipped'
+                                    ? 'You have shipped this item. Waiting for buyer confirmation.'
+                                    : 'This item has been purchased. Please proceed to ship it to the buyer.'}
+                        </p>
+                    </div>
+                    <div className="ml-auto">
+                        {link.shipping_status !== 'shipped' && link.shipping_status !== 'delivered' && (
+                            <Link href={`/dashboard/ship/${link.id}`}>
+                                <Button className="bg-green-600 hover:bg-green-700 text-white border-none">
+                                    <Truck className="h-4 w-4 mr-2" />
+                                    Ship Item
+                                </Button>
+                            </Link>
+                        )}
+                        {link.shipping_status === 'shipped' && (
+                            <Button variant="outline" disabled className="border-purple-500/30 text-purple-500">
+                                <Truck className="h-4 w-4 mr-2" />
+                                Shipped
+                            </Button>
+                        )}
+                    </div>
+                </div>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Left Column: Link Info */}

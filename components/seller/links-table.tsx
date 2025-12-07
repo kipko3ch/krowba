@@ -149,33 +149,28 @@ export function LinksTable({ links }: LinksTableProps) {
                                 </TableCell>
                                 <TableCell className="text-right">
                                     <div className="flex items-center justify-end gap-2">
-                                        {link.status === 'sold' && link.shipping_status !== 'shipped' && link.shipping_status !== 'delivered' && (
+                                        {link.status === 'sold' && link.shipping_status !== 'shipped' && link.shipping_status !== 'delivered' ? (
                                             <Button
                                                 variant="outline"
                                                 size="sm"
                                                 className="h-8 border-primary/30 text-primary hover:bg-primary/10"
-                                                onClick={async () => {
-                                                    if (!confirm("Mark this item as shipped?")) return;
-                                                    try {
-                                                        const res = await fetch("/api/orders/update-status", {
-                                                            method: "POST",
-                                                            body: JSON.stringify({ linkId: link.id, status: 'shipped', action: 'mark_shipped' })
-                                                        })
-                                                        if (res.ok) {
-                                                            toast.success("Marked as shipped")
-                                                            router.refresh()
-                                                        } else {
-                                                            throw new Error("Failed to update")
-                                                        }
-                                                    } catch (e) {
-                                                        toast.error("Failed to update status")
-                                                    }
-                                                }}
+                                                onClick={() => router.push(`/dashboard/ship/${link.id}`)}
                                             >
                                                 <Truck className="h-3.5 w-3.5 mr-1.5" />
                                                 Ship
                                             </Button>
-                                        )}
+                                        ) : link.status === 'active' ? (
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-8 text-muted-foreground"
+                                                disabled
+                                                title="Waiting for payment"
+                                            >
+                                                <Truck className="h-3.5 w-3.5 mr-1.5" />
+                                                Ship
+                                            </Button>
+                                        ) : null}
 
                                         <Button
                                             variant="ghost"
@@ -193,12 +188,14 @@ export function LinksTable({ links }: LinksTableProps) {
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
-                                                <DropdownMenuItem asChild>
-                                                    <Link href={`/dashboard/links/${link.short_code}/edit`}>
-                                                        <Eye className="h-4 w-4 mr-2" />
-                                                        Edit Link
-                                                    </Link>
-                                                </DropdownMenuItem>
+                                                {!(link.status === 'sold' && link.shipping_status === 'delivered') && (
+                                                    <DropdownMenuItem asChild>
+                                                        <Link href={`/dashboard/links/${link.short_code}/edit`}>
+                                                            <Eye className="h-4 w-4 mr-2" />
+                                                            Edit Link
+                                                        </Link>
+                                                    </DropdownMenuItem>
+                                                )}
                                                 <DropdownMenuItem asChild>
                                                     <Link href={`/pay/${link.short_code}`} target="_blank">
                                                         <ExternalLink className="h-4 w-4 mr-2" />

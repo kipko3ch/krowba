@@ -15,9 +15,12 @@ interface TransactionWithRelations {
   payment_type: string
   created_at: string
   krowba_links: {
+    id: string
     item_name: string
     short_code: string
     images: string[]
+    shipping_status: string | null
+    shipping_proof_url: string | null
   } | null
   escrow_holds: {
     amount: number
@@ -66,6 +69,17 @@ export function TransactionsTable({ transactions }: TransactionsTableProps) {
   }
 
   const getDeliveryStatus = (tx: TransactionWithRelations) => {
+    // Check krowba_links shipping status first (new flow)
+    if (tx.krowba_links?.shipping_status === 'shipped' || tx.krowba_links?.shipping_status === 'delivered') {
+      return (
+        <div className="flex items-center gap-1 text-sm">
+          <Truck className="h-4 w-4 text-green-600" />
+          <span>{tx.krowba_links.shipping_status === 'delivered' ? 'Delivered' : 'Shipped'}</span>
+        </div>
+      )
+    }
+
+    // Fallback to old shipping_proofs table check
     if (tx.shipping_proofs.length > 0) {
       return (
         <div className="flex items-center gap-1 text-sm">
@@ -150,13 +164,20 @@ export function TransactionsTable({ transactions }: TransactionsTableProps) {
                         <Eye className="h-4 w-4" />
                       </Button>
                     </Link>
-                    {tx.status === "completed" && tx.shipping_proofs.length === 0 && (
-                      <Link href={`/dashboard/ship/${tx.id}`}>
-                        <Button size="sm">
+                    {tx.status === "completed" && (
+                      (tx.krowba_links?.shipping_status !== 'shipped' && tx.krowba_links?.shipping_status !== 'delivered' && tx.shipping_proofs.length === 0) ? (
+                        <Link href={`/dashboard/ship/${tx.krowba_links?.id || tx.id}`}>
+                          <Button size="sm">
+                            <Truck className="h-4 w-4 mr-2" />
+                            Ship
+                          </Button>
+                        </Link>
+                      ) : (
+                        <Button size="sm" variant="secondary" disabled className="opacity-70">
                           <Truck className="h-4 w-4 mr-2" />
-                          Ship
+                          Shipped
                         </Button>
-                      </Link>
+                      )
                     )}
                   </div>
                 </td>

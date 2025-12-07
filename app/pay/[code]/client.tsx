@@ -410,6 +410,43 @@ export default function PaymentPageClient({ link }: PaymentPageClientProps) {
                                                 {orderStatus === 'shipped' && (
                                                     <p className="text-sm text-primary font-medium animate-pulse">In Transit...</p>
                                                 )}
+
+                                                {/* Shipping Details */}
+                                                {['shipped', 'delivered'].includes(orderStatus) && (
+                                                    <div className="mt-4 bg-muted/50 rounded-xl p-4 space-y-3 text-sm border border-border/50">
+                                                        {link.shipping_courier && (
+                                                            <div className="flex justify-between">
+                                                                <span className="text-muted-foreground">Courier:</span>
+                                                                <span className="font-medium">{link.shipping_courier}</span>
+                                                            </div>
+                                                        )}
+                                                        {link.tracking_number && (
+                                                            <div className="flex justify-between">
+                                                                <span className="text-muted-foreground">Tracking #:</span>
+                                                                <span className="font-mono bg-background px-1.5 py-0.5 rounded border border-border">{link.tracking_number}</span>
+                                                            </div>
+                                                        )}
+                                                        {link.shipping_notes && (
+                                                            <div className="pt-2 border-t border-border/50">
+                                                                <span className="text-muted-foreground block mb-1">Note from Seller:</span>
+                                                                <p className="italic text-foreground/80">"{link.shipping_notes}"</p>
+                                                            </div>
+                                                        )}
+                                                        {link.shipping_proof_url && (
+                                                            <div className="pt-2">
+                                                                <a
+                                                                    href={link.shipping_proof_url}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="inline-flex items-center text-primary hover:underline text-xs"
+                                                                >
+                                                                    <Package className="w-3 h-3 mr-1" />
+                                                                    View Shipping Proof
+                                                                </a>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
 

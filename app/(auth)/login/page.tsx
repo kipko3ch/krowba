@@ -38,7 +38,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex w-full bg-background font-sans">
+    <div className="min-h-screen flex w-full bg-white font-sans text-gray-900">
       {/* Left Side - Aurora Background (Hidden on Mobile) */}
       <div className="hidden lg:flex w-1/2 relative overflow-hidden bg-[#f8faf9] items-center justify-center p-12">
         {/* Background Elements */}

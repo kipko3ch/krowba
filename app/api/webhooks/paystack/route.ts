@@ -94,7 +94,7 @@ async function handleChargeSuccess(data: PaystackEvent["data"]) {
         return
     }
 
-    // Update transaction to HELD (not released!)
+    // Update transaction to completed with Paystack details
     await supabaseAdmin
         .from("transactions")
         .update({
@@ -113,6 +113,12 @@ async function handleChargeSuccess(data: PaystackEvent["data"]) {
         amount: transaction.amount,
         currency: "KES",
         status: "held",
+    })
+
+    // Add to seller's pending escrow balance
+    await supabaseAdmin.rpc("increment_seller_pending_balance", {
+        p_seller_id: transaction.seller_id,
+        p_amount: transaction.amount,
     })
 
     // Update link status to "paid"
@@ -137,6 +143,7 @@ async function handleChargeSuccess(data: PaystackEvent["data"]) {
     })
 
     console.log(`[Paystack Webhook] Payment HELD: ${amount / 100} KES for transaction ${transaction.id}`)
+
 }
 
 // Handle successful transfer (payout to seller)
@@ -144,35 +151,56 @@ async function handleTransferSuccess(data: PaystackEvent["data"]) {
     const { reference, transfer_code } = data
     const supabaseAdmin = getSupabaseAdmin()
 
-    // Find escrow by transfer reference
-    const { data: escrow } = await supabaseAdmin
-        .from("escrow_holds")
-        .select("*")
+    // Find payout by transfer reference
+    const { data: payout } = await supabaseAdmin
+        .from("payouts")
+        .select("*, escrow_holds(*)")
         .eq("transfer_reference", reference)
         .single()
 
-    if (!escrow) {
-        console.error("[Paystack Webhook] Escrow not found for transfer:", reference)
+    if (!payout) {
+        console.error("[Paystack Webhook] Payout not found for transfer:", reference)
         return
     }
 
-    // Update escrow to released
+    // Update payout to SUCCESS
     await supabaseAdmin
-        .from("escrow_holds")
+        .from("payouts")
         .update({
-            status: "released",
-            released_at: new Date().toISOString(),
+            status: "SUCCESS",
             transfer_code: transfer_code,
+            updated_at: new Date().toISOString(),
         })
-        .eq("id", escrow.id)
+        .eq("id", payout.id)
 
-    // Update link status
-    await supabaseAdmin
-        .from("krowba_links")
-        .update({ status: "completed" })
-        .eq("id", escrow.krowba_link_id)
+    // Update escrow to released (if exists)
+    if (payout.escrow_hold_id) {
+        await supabaseAdmin
+            .from("escrow_holds")
+            .update({
+                status: "released",
+                released_at: new Date().toISOString(),
+                transfer_code: transfer_code,
+            })
+            .eq("id", payout.escrow_hold_id)
 
-    console.log(`[Paystack Webhook] Transfer successful: ${escrow.amount} KES released to seller`)
+        // Update link status to completed
+        if (payout.escrow_holds?.[0]) {
+            await supabaseAdmin
+                .from("krowba_links")
+                .update({ status: "completed" })
+                .eq("id", payout.escrow_holds[0].krowba_link_id)
+        }
+    }
+
+    // Increment seller's total paid out
+    await supabaseAdmin.rpc("increment_seller_total_paid_out", {
+        p_seller_id: payout.seller_id,
+        p_amount: payout.amount,
+    })
+
+    console.log(`[Paystack Webhook] Transfer successful: ${payout.amount} KES paid to seller ${payout.seller_id}`)
+
 }
 
 // Handle failed transfer
@@ -180,24 +208,35 @@ async function handleTransferFailed(data: PaystackEvent["data"]) {
     const { reference } = data
     const supabaseAdmin = getSupabaseAdmin()
 
-    const { data: escrow } = await supabaseAdmin
-        .from("escrow_holds")
+    // Find payout by transfer reference
+    const { data: payout } = await supabaseAdmin
+        .from("payouts")
         .select("*")
         .eq("transfer_reference", reference)
         .single()
 
-    if (!escrow) return
+    if (!payout) {
+        console.error("[Paystack Webhook] Payout not found for failed transfer:", reference)
+        return
+    }
 
-    // Mark as failed - will need manual retry
+    // Mark payout as FAILED
     await supabaseAdmin
-        .from("escrow_holds")
+        .from("payouts")
         .update({
-            status: "transfer_failed",
+            status: "FAILED",
             updated_at: new Date().toISOString(),
         })
-        .eq("id", escrow.id)
+        .eq("id", payout.id)
 
-    console.error(`[Paystack Webhook] Transfer FAILED for escrow ${escrow.id}`)
+    // Refund amount back to seller's available balance (for retry)
+    await supabaseAdmin.rpc("increment_seller_available_balance", {
+        p_seller_id: payout.seller_id,
+        p_amount: payout.amount,
+    })
+
+    console.error(`[Paystack Webhook] Transfer FAILED for payout ${payout.id} - Amount refunded to available balance`)
+
 }
 
 // Handle refund processed

@@ -47,8 +47,6 @@ export default async function LinkDetailsPage({ params }: PageProps) {
 
     return (
         <div className="min-h-screen bg-background">
-            <DashboardHeader seller={seller} />
-
             <main className="container mx-auto px-4 py-8">
                 <LinkDetails
                     link={link}

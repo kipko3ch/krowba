@@ -55,31 +55,39 @@ export async function POST(request: NextRequest) {
       }, { status: 500 })
     }
 
-    const prompt = `You are a seller on social media (Instagram/Twitter/WhatsApp) creating a payment link for a buyer who has likely already seen your post or story.
+    const prompt = `You are an AI verification agent for a secure escrow platform (Krowba).
+    
+Analyze this product image CAREFULLY. Your goal is to verify the item for a transaction.
+- Identify the MAIN item for sale clearly.
+- If it is a phone in a case, identify it as the PHONE.
+- If it is a laptop with a sticker, identify the LAPTOP.
+- Be specific about the model, brand, and color.
 
-Analyze this product image and generate a description in the FIRST PERSON.
+Generate a description that confirms what the item is.
 
 TONE:
-- Casual, direct, and personal (like a DM or caption)
-- NOT "salesy" or "e-commerce" style
-- Assume the buyer is already interested
-- Example: "Here's the iPhone 12 we talked about. It's in great condition..." or "As seen on my story, this is the..."
+- Professional, objective, and clear.
+- NOT "salesy" or "promotional".
+- Focus on FACTS for the buyer to verify.
+- Example: "iPhone 12, Blue, 128GB. Visible condition appears good."
 
 Return JSON:
 {
-  "item_name": "Short, catchy name (e.g., 'Blue iPhone 12 - 128GB')",
+  "item_name": "Clear, specific name (e.g., 'iPhone 12 - Blue - 128GB')",
+  "category": "Electronics" | "Fashion" | "Home" | "Beauty" | "Automotive" | "Other",
   "condition": "New" | "Like New" | "Good" | "Fair" | "Poor",
-  "description": "Write a short, casual note to the buyer. Mention key details (condition, defects) honestly but casually. Don't use bullet points or formal language. Keep it under 280 characters if possible.",
+  "description": "A clear, objective description of the item visible in the image. Mention key details and condition facts. Keep it under 280 characters.",
   "defects": ["visible defects"] or [],
   "suggested_price": {"min": number, "max": number},
-  "confidence": 0.0-1.0,
-  "missing_details": ["storage", "color", "size", "model variant", "year"] or []
+  "confidence": 1-10,
+  "missing_details": ["storage", "color", "size", "model variant", "year"] or [],
+  "low_confidence_reason": "Reason if confidence is < 7 (e.g. 'Image blurry', 'Item partially hidden')"
 }
 
-IMPORTANT: 
-- Sound like a REAL PERSON, not a bot.
-- Be honest about condition.
-- Use a friendly, social-media-native tone.
+IMPORTANT:
+- ACCURACY IS KEY.
+- Be objective.
+- If confidence is low (< 7), explain why.
 
 Prices in KES. Return ONLY valid JSON.`
 

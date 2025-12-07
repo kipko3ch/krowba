@@ -18,9 +18,12 @@ export default async function TransactionsPage() {
     .select(`
       *,
       krowba_links (
+        id,
         item_name,
         short_code,
-        images
+        images,
+        shipping_status,
+        shipping_proof_url
       ),
       escrow_holds (
         amount,

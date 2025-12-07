@@ -99,64 +99,18 @@ export default function PaymentCallbackContent() {
                     <div className="space-y-8">
                         {/* Success Icon */}
                         <div className="text-center">
-                            <div className="w-20 h-20 mx-auto bg-primary/10 rounded-full flex items-center justify-center">
-                                <CheckCircle2 className="h-10 w-10 text-primary" />
+                            <div className="w-20 h-20 mx-auto bg-green-500/10 rounded-full flex items-center justify-center animate-in zoom-in duration-300">
+                                <CheckCircle2 className="h-10 w-10 text-green-600" />
                             </div>
-                            <h1 className="text-2xl font-bold mt-6 text-primary">Payment Successful!</h1>
+                            <h1 className="text-2xl font-bold mt-6 text-green-700">Payment Successful!</h1>
                             <p className="text-muted-foreground mt-2">{message}</p>
                             <p className="text-sm text-muted-foreground mt-1">
                                 Reference: <code className="bg-muted px-2 py-0.5 rounded text-xs">{reference}</code>
                             </p>
                         </div>
 
-                        {/* Next Steps Card */}
-                        <div className="bg-card border border-border rounded-xl p-6 space-y-6">
-                            <h2 className="font-semibold text-lg">What's Next?</h2>
-
-                            <div className="space-y-4">
-                                {/* Step 1 */}
-                                <div className="flex gap-4">
-                                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                                        <Camera className="w-4 h-4 text-primary" />
-                                    </div>
-                                    <div>
-                                        <p className="font-medium">Take a Screenshot</p>
-                                        <p className="text-sm text-muted-foreground mt-1">
-                                            Capture this confirmation screen as proof of payment
-                                        </p>
-                                    </div>
-                                </div>
-
-                                {/* Step 2 */}
-                                <div className="flex gap-4">
-                                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                                        <MessageCircle className="w-4 h-4 text-primary" />
-                                    </div>
-                                    <div>
-                                        <p className="font-medium">Contact the Seller</p>
-                                        <p className="text-sm text-muted-foreground mt-1">
-                                            Send the screenshot to the seller via WhatsApp or chat to confirm your order
-                                        </p>
-                                    </div>
-                                </div>
-
-                                {/* Step 3 */}
-                                <div className="flex gap-4">
-                                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                                        <CheckCircle2 className="w-4 h-4 text-primary" />
-                                    </div>
-                                    <div>
-                                        <p className="font-medium">Confirm Delivery</p>
-                                        <p className="text-sm text-muted-foreground mt-1">
-                                            Once you receive your item, confirm delivery so the seller gets paid
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
                         {/* Protection Notice */}
-                        <div className="bg-primary/5 border border-primary/20 rounded-xl p-4">
+                        <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 text-center">
                             <p className="text-sm">
                                 <span className="font-semibold">🛡️ You're Protected:</span>{" "}
                                 <span className="text-muted-foreground">
@@ -166,24 +120,12 @@ export default function PaymentCallbackContent() {
                         </div>
 
                         {/* Actions */}
-                        <div className="flex flex-col sm:flex-row gap-3">
-                            <Button asChild className="flex-1 h-12 bg-primary hover:bg-primary/90 text-black font-semibold">
+                        <div className="flex flex-col gap-3">
+                            <Button asChild className="h-12 bg-primary hover:bg-primary/90 text-black font-semibold w-full">
                                 <Link href="/" className="flex items-center justify-center gap-2">
                                     <Home className="w-4 h-4" />
-                                    Return Home
+                                    Return to Order
                                 </Link>
-                            </Button>
-                            <Button asChild variant="outline" className="flex-1 h-12 font-semibold">
-                                <a
-                                    href="https://wa.me/?text=I%20just%20made%20a%20payment%20on%20Krowba.%20Here%20is%20my%20confirmation."
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex items-center justify-center gap-2"
-                                >
-                                    <MessageCircle className="w-4 h-4" />
-                                    Open WhatsApp
-                                    <ArrowRight className="w-4 h-4" />
-                                </a>
                             </Button>
                         </div>
                     </div>

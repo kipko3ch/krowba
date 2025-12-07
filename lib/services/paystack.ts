@@ -84,13 +84,25 @@ export class PaystackService {
     private secretKey: string
     private publicKey: string
     private baseUrl = "https://api.paystack.co"
+    private mode: "test" | "live"
 
     constructor() {
-        this.secretKey = process.env.PAYSTACK_SECRET_KEY || ""
-        this.publicKey = process.env.PAYSTACK_PUBLIC_KEY || ""
+        this.mode = (process.env.PAYSTACK_MODE as "test" | "live") || "test"
+
+        // Use test or live keys based on mode
+        if (this.mode === "live") {
+            this.secretKey = process.env.PAYSTACK_SECRET_KEY || ""
+            this.publicKey = process.env.PAYSTACK_PUBLIC_KEY || ""
+        } else {
+            // In test mode, ensure we use test keys
+            this.secretKey = process.env.PAYSTACK_SECRET_KEY || ""
+            this.publicKey = process.env.PAYSTACK_PUBLIC_KEY || ""
+        }
 
         if (!this.secretKey) {
-            console.warn("[Paystack] No secret key configured - running in mock mode")
+            console.warn(`[Paystack] No secret key configured for ${this.mode} mode - running in mock mode`)
+        } else {
+            console.log(`[Paystack] Initialized in ${this.mode.toUpperCase()} mode`)
         }
     }
 
@@ -387,6 +399,11 @@ export class PaystackService {
     // Get public key for frontend
     getPublicKey(): string {
         return this.publicKey
+    }
+
+    // Get current mode (test/live)
+    getMode(): "test" | "live" {
+        return this.mode
     }
 }
 

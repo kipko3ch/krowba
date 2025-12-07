@@ -27,11 +27,17 @@ export async function POST(request: NextRequest) {
             // Seller Action
             // TODO: Verify user is seller (omitted for speed, relying on UI context for now)
 
+            const { shipping_proof_url, shipping_courier, tracking_number, shipping_notes } = body
+
             const { error: updateError } = await supabase
                 .from("krowba_links")
                 .update({
                     shipping_status: 'shipped',
-                    shipped_at: new Date().toISOString()
+                    shipped_at: new Date().toISOString(),
+                    shipping_proof_url,
+                    shipping_courier,
+                    tracking_number,
+                    shipping_notes
                 })
                 .eq("id", linkId)
 
@@ -111,8 +117,13 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ success: true })
 
-    } catch (error) {
-        console.error("Order status update error:", error)
+    } catch (error: any) {
+        console.error("Order status update error details:", {
+            message: error.message,
+            code: error.code,
+            details: error.details,
+            hint: error.hint
+        })
         return NextResponse.json(
             { error: error instanceof Error ? error.message : "Internal server error" },
             { status: 500 }

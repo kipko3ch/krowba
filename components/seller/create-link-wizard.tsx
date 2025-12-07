@@ -11,7 +11,7 @@ import { FileUpload } from "@/components/ui/file-upload"
 import { MovingBorderContainer } from "@/components/ui/moving-border"
 import { CometCard } from "@/components/ui/comet-card"
 import { toast } from "sonner"
-import { Loader2, Sparkles, Shield, AlertTriangle, ArrowRight, CheckCircle2, ArrowLeft, ScanLine, Gem, Copy, Share2, ExternalLink } from "lucide-react"
+import { Loader2, Sparkles, Shield, AlertTriangle, ArrowRight, CheckCircle2, ArrowLeft, ScanLine, Gem, Copy, Share2, ExternalLink, Camera } from "lucide-react"
 import type { EscrowMode } from "@/types"
 import { cn } from "@/lib/utils"
 import QRCode from "react-qr-code"
@@ -269,7 +269,7 @@ export function CreateLinkWizard() {
                                     />
                                 )}
                                 {/* Gradient Overlay */}
-                                <div className="absolute inset-0 bg-gradient-to-t from-card via-transparent to-transparent" />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
                                 {/* Success Badge */}
                                 <div className="absolute top-3 right-3 bg-primary/90 text-primary-foreground px-2.5 py-1 rounded-full text-[10px] font-medium flex items-center gap-1">
@@ -279,8 +279,8 @@ export function CreateLinkWizard() {
 
                                 {/* Product Info Overlay */}
                                 <div className="absolute bottom-0 left-0 right-0 p-4">
-                                    <h3 className="font-semibold text-foreground text-base truncate">{itemName}</h3>
-                                    <p className="text-foreground font-bold text-lg">KES {Number(itemPrice).toLocaleString()}</p>
+                                    <h3 className="font-semibold text-white text-base truncate">{itemName}</h3>
+                                    <p className="text-white font-bold text-lg">KES {Number(itemPrice).toLocaleString()}</p>
                                 </div>
                             </div>
 
@@ -374,8 +374,41 @@ export function CreateLinkWizard() {
 
                     {/* Upload Area */}
                     {images.length === 0 && !isAnalyzing && (
-                        <div className="bg-card border border-border hover:border-blue-500/30 rounded-2xl overflow-hidden transition-all duration-500">
-                            <FileUpload onChange={handleFileUpload} />
+                        <div className="space-y-6">
+                            <div className="bg-card border border-border hover:border-blue-500/30 rounded-2xl overflow-hidden transition-all duration-500">
+                                <FileUpload onChange={handleFileUpload} />
+                            </div>
+
+                            <div className="relative">
+                                <div className="absolute inset-0 flex items-center">
+                                    <span className="w-full border-t border-border" />
+                                </div>
+                                <div className="relative flex justify-center text-xs uppercase">
+                                    <span className="bg-background px-2 text-muted-foreground">Or</span>
+                                </div>
+                            </div>
+
+                            <Button
+                                variant="outline"
+                                className="w-full py-8 border-dashed border-2 flex flex-col gap-2 h-auto hover:bg-accent/50 hover:border-primary/50 transition-all"
+                                onClick={() => document.getElementById('camera-input')?.click()}
+                            >
+                                <Camera className="h-8 w-8 text-muted-foreground" />
+                                <span className="text-muted-foreground font-medium">Take a Photo</span>
+                            </Button>
+
+                            <input
+                                id="camera-input"
+                                type="file"
+                                accept="image/*"
+                                capture="environment"
+                                className="hidden"
+                                onChange={(e) => {
+                                    if (e.target.files && e.target.files.length > 0) {
+                                        handleFileUpload(Array.from(e.target.files))
+                                    }
+                                }}
+                            />
                         </div>
                     )}
 
@@ -440,12 +473,44 @@ export function CreateLinkWizard() {
                     <div className="flex items-center justify-between">
                         <h2 className="text-2xl font-serif font-medium">Verify Details</h2>
                         {aiAnalysis && (
-                            <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-purple-500/10 dark:bg-purple-500/20 border border-purple-500/30 text-purple-600 dark:text-purple-400 text-sm font-medium shadow-[0_0_15px_-3px_rgba(168,85,247,0.3)]">
-                                <Sparkles className="h-4 w-4" />
-                                <span>{Math.round((aiAnalysis.confidence || 0) * 100)}% Match</span>
+                            <div className={cn(
+                                "flex items-center gap-2 px-4 py-1.5 rounded-full border text-sm font-medium shadow-sm",
+                                (aiAnalysis.confidence || 0) >= 7
+                                    ? "bg-purple-500/10 border-purple-500/30 text-purple-600 dark:text-purple-400 shadow-[0_0_15px_-3px_rgba(168,85,247,0.3)]"
+                                    : "bg-yellow-500/10 border-yellow-500/30 text-yellow-600 dark:text-yellow-400"
+                            )}>
+                                {(aiAnalysis.confidence || 0) >= 7 ? <Sparkles className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+                                <span>{aiAnalysis.confidence}/10 Confidence</span>
                             </div>
                         )}
                     </div>
+
+                    {aiAnalysis && (aiAnalysis.confidence || 0) < 7 && (
+                        <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4 flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
+                            <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 shrink-0 mt-0.5" />
+                            <div className="space-y-1">
+                                <h3 className="font-medium text-yellow-700 dark:text-yellow-400">Low Confidence Analysis</h3>
+                                <p className="text-sm text-yellow-600/90 dark:text-yellow-400/90">
+                                    The AI isn't fully sure about this item.
+                                    {/* @ts-ignore */}
+                                    {aiAnalysis.low_confidence_reason ? ` Reason: ${aiAnalysis.low_confidence_reason}.` : ""}
+                                    <br />Consider uploading more clear photos for better accuracy.
+                                </p>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                        setStep(1);
+                                        setImages([]); // Optional: clear images or keep them
+                                        setAiAnalysis(null);
+                                    }}
+                                    className="mt-2 border-yellow-500/30 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-500/10"
+                                >
+                                    Upload Better Photos
+                                </Button>
+                            </div>
+                        </div>
+                    )}
 
                     <div className="grid gap-6">
                         <div className={cn(

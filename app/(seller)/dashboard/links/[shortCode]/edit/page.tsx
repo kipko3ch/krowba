@@ -32,6 +32,11 @@ export default async function EditLinkPage({ params }: PageProps) {
         redirect("/dashboard/links")
     }
 
+    // Prevent editing if order is already delivered
+    if (link.status === 'sold' && link.shipping_status === 'delivered') {
+        redirect(`/dashboard/links/${shortCode}`)
+    }
+
     return (
         <main className="container mx-auto px-4 py-8">
             <div className="max-w-7xl mx-auto">
