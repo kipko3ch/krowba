@@ -16,15 +16,20 @@ export async function PUT(request: NextRequest) {
         console.log("Update Link Body:", body)
         const { link_id, item_name, item_price, delivery_fee, escrow_mode, deposit_amount, access_pin, images } = body
 
-        // Verify ownership
+        // Verify ownership and delivery status
         const { data: existingLink } = await supabase
             .from("krowba_links")
-            .select("seller_id")
+            .select("seller_id, status, shipping_status")
             .eq("id", link_id)
             .single()
 
         if (!existingLink || existingLink.seller_id !== user.id) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+        }
+
+        // Prevent editing if order is already delivered
+        if (existingLink.status === 'sold' && existingLink.shipping_status === 'delivered') {
+            return NextResponse.json({ error: "Cannot edit link after delivery is completed" }, { status: 403 })
         }
 
         // Update link
