@@ -32,10 +32,19 @@ export default async function LinkDetailsPage({ params }: PageProps) {
         notFound()
     }
 
-    // Fetch related transactions
+    // Fetch related transactions with refund info
     const { data: transactions } = await supabase
         .from("transactions")
-        .select("*")
+        .select(`
+          *,
+          delivery_evidence(
+            id,
+            description,
+            evidence_photos,
+            evidence_type,
+            created_at
+          )
+        `)
         .eq("krowba_link_id", link.id)
         .order("created_at", { ascending: false })
 
@@ -45,6 +54,13 @@ export default async function LinkDetailsPage({ params }: PageProps) {
     // Fetch shipping proofs
     const { data: shippingProofs } = await supabase.from("shipping_proofs").select("*").eq("krowba_link_id", link.id)
 
+    // Fetch refunds for this link
+    const { data: refunds } = await supabase
+        .from("refunds")
+        .select("*")
+        .in("transaction_id", transactions?.map(t => t.id) || [])
+        .order("created_at", { ascending: false })
+
     return (
         <div className="min-h-screen bg-background">
             <main className="container mx-auto px-4 py-8">
@@ -53,6 +69,7 @@ export default async function LinkDetailsPage({ params }: PageProps) {
                     transactions={transactions || []}
                     escrowHolds={escrowHolds || []}
                     shippingProofs={shippingProofs || []}
+                    refunds={refunds || []}
                 />
             </main>
         </div>

@@ -37,9 +37,10 @@ interface LinkDetailsProps {
     transactions: Transaction[]
     escrowHolds: any[]
     shippingProofs: any[]
+    refunds?: any[]
 }
 
-export function LinkDetails({ link, transactions, escrowHolds, shippingProofs }: LinkDetailsProps) {
+export function LinkDetails({ link, transactions, escrowHolds, shippingProofs, refunds }: LinkDetailsProps) {
     const router = useRouter()
     const [showQr, setShowQr] = useState(false)
 
@@ -322,6 +323,86 @@ export function LinkDetails({ link, transactions, escrowHolds, shippingProofs }:
                             </div>
                         </CardContent>
                     </Card>
+
+                    {/* Refund Information */}
+                    {refunds && refunds.length > 0 && (
+                        <Card className="bg-card border-red-500/20">
+                            <CardHeader>
+                                <CardTitle className="text-foreground flex items-center gap-2">
+                                    <XCircle className="h-5 w-5 text-red-500" />
+                                    Refund Information
+                                </CardTitle>
+                                <CardDescription>Buyer requested a refund</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                {refunds.map((refund, idx) => {
+                                    const transaction = transactions.find(t => t.id === refund.transaction_id)
+                                    const evidence = transaction?.delivery_evidence?.[0]
+
+                                    return (
+                                        <div key={refund.id} className="space-y-4">
+                                            {idx > 0 && <Separator className="my-4" />}
+                                            <div className="space-y-3">
+                                                <div className="flex items-start justify-between">
+                                                    <div>
+                                                        <p className="text-sm font-medium text-foreground">
+                                                            Refund Amount
+                                                        </p>
+                                                        <p className="text-xl font-bold text-red-500">
+                                                            KES {refund.amount.toLocaleString()}
+                                                        </p>
+                                                    </div>
+                                                    <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20">
+                                                        {refund.status.toUpperCase()}
+                                                    </Badge>
+                                                </div>
+
+                                                <div>
+                                                    <p className="text-sm font-medium text-foreground mb-1">
+                                                        Reason
+                                                    </p>
+                                                    <p className="text-sm text-muted-foreground bg-muted p-3 rounded border border-border">
+                                                        {refund.reason || "No reason provided"}
+                                                    </p>
+                                                </div>
+
+                                                {evidence && (
+                                                    <div>
+                                                        <p className="text-sm font-medium text-foreground mb-2">
+                                                            Customer Notes
+                                                        </p>
+                                                        <div className="bg-muted p-3 rounded border border-border space-y-2">
+                                                            <p className="text-sm text-foreground">
+                                                                {evidence.description}
+                                                            </p>
+                                                            {evidence.evidence_photos && evidence.evidence_photos.length > 0 && (
+                                                                <div>
+                                                                    <p className="text-xs text-muted-foreground mb-2">
+                                                                        Evidence Photos ({evidence.evidence_photos.length})
+                                                                    </p>
+                                                                    <div className="grid grid-cols-2 gap-2">
+                                                                        {evidence.evidence_photos.map((photo: string, photoIdx: number) => (
+                                                                            <div key={photoIdx} className="relative aspect-square rounded overflow-hidden border border-border">
+                                                                                <img src={photo} alt={`Evidence ${photoIdx + 1}`} className="object-cover w-full h-full" />
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                <div className="text-xs text-muted-foreground">
+                                                    Requested on {new Date(refund.created_at).toLocaleString()}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </CardContent>
+                        </Card>
+                    )}
                 </div>
             </div>
 

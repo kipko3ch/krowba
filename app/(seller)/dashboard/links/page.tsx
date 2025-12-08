@@ -18,7 +18,22 @@ export default async function LinksPage() {
 
   const { data: links } = await supabase
     .from("krowba_links")
-    .select("*")
+    .select(`
+      *,
+      transactions(
+        id,
+        status,
+        refund_status,
+        refund_reason,
+        refunded_at,
+        delivery_evidence(
+          id,
+          description,
+          evidence_photos,
+          created_at
+        )
+      )
+    `)
     .eq("seller_id", user.id)
     .order("created_at", { ascending: false })
 
