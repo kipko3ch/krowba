@@ -18,7 +18,7 @@ import QRCode from "react-qr-code"
 
 export function CreateLinkWizard() {
     const router = useRouter()
-    const [step, setStep] = useState<1 | 2 | 3 | 4 | 5 | "loading" | "success">(1)
+    const [step, setStep] = useState<1 | 2 | 3 | 4 | "loading" | "success">(1)
     const [isLoading, setIsLoading] = useState(false)
     const [isAnalyzing, setIsAnalyzing] = useState(false)
 
@@ -31,11 +31,6 @@ export function CreateLinkWizard() {
     const [depositAmount, setDepositAmount] = useState("")
     const [accessPin, setAccessPin] = useState("")
     const [escrowMode, setEscrowMode] = useState<EscrowMode>("full_escrow")
-
-    // Buyer Details
-    const [buyerName, setBuyerName] = useState("")
-    const [buyerEmail, setBuyerEmail] = useState("")
-    const [buyerPhone, setBuyerPhone] = useState("")
 
     // Success State
     const [createdLink, setCreatedLink] = useState<{ short_code: string; id: string } | null>(null)
@@ -148,9 +143,6 @@ export function CreateLinkWizard() {
                     deposit_amount: escrowMode === "split_risk" ? Number(depositAmount) : null,
                     access_pin: accessPin || null,
                     escrow_mode: escrowMode,
-                    buyer_name: buyerName || null,
-                    buyer_email: buyerEmail || null,
-                    buyer_phone: buyerPhone || null,
                     images
                 }),
             })
@@ -169,7 +161,7 @@ export function CreateLinkWizard() {
         } catch (error: any) {
             console.error("Submit error:", error)
             toast.error(error.message || "Failed to create link")
-            setStep(4)
+            setStep(3) // Go back to pricing step on error
         }
     }
 
@@ -341,7 +333,7 @@ export function CreateLinkWizard() {
             {/* Progress Steps */}
             <div className="flex items-center justify-between mb-12 relative max-w-lg mx-auto">
                 <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-0.5 bg-border -z-10" />
-                {[1, 2, 3, 4, 5].map((s) => (
+                {[1, 2, 3, 4].map((s) => (
                     <div
                         key={s}
                         className={cn(
@@ -772,44 +764,29 @@ export function CreateLinkWizard() {
                 </div>
             )}
 
-            {/* STEP 4: BUYER DETAILS */}
+            {/* STEP 4: ACCESS PIN (Optional) & Submit */}
             {step === 4 && (
                 <div className="space-y-8 animate-in fade-in slide-in-from-right-8 duration-500">
                     <div className="text-center space-y-2">
-                        <h2 className="text-2xl font-serif font-medium">Buyer Details</h2>
-                        <p className="text-muted-foreground">Who is this link for?</p>
+                        <h2 className="text-2xl font-serif font-medium">Access Protection</h2>
+                        <p className="text-muted-foreground">Optionally add a PIN to restrict access to this link.</p>
                     </div>
 
                     <div className="bg-card border border-border rounded-2xl p-8 shadow-lg space-y-6">
                         <div className="space-y-4">
                             <div className="space-y-2">
-                                <Label>Buyer Name (Optional)</Label>
+                                <Label>Access PIN (Optional)</Label>
                                 <Input
-                                    value={buyerName}
-                                    onChange={(e) => setBuyerName(e.target.value)}
-                                    placeholder="e.g. Jane Doe"
-                                    className="h-12 bg-background"
+                                    type="password"
+                                    maxLength={6}
+                                    value={accessPin}
+                                    onChange={(e) => setAccessPin(e.target.value)}
+                                    placeholder="Enter 4-6 digit PIN"
+                                    className="h-12 bg-background text-center text-2xl tracking-widest font-mono"
                                 />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Buyer Email (Optional)</Label>
-                                <Input
-                                    type="email"
-                                    value={buyerEmail}
-                                    onChange={(e) => setBuyerEmail(e.target.value)}
-                                    placeholder="jane@example.com"
-                                    className="h-12 bg-background"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Buyer Phone (Optional)</Label>
-                                <Input
-                                    type="tel"
-                                    value={buyerPhone}
-                                    onChange={(e) => setBuyerPhone(e.target.value)}
-                                    placeholder="+254..."
-                                    className="h-12 bg-background"
-                                />
+                                <p className="text-xs text-muted-foreground">
+                                    If set, buyers will need this PIN to view and pay for this item. Leave blank for public access.
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -819,77 +796,21 @@ export function CreateLinkWizard() {
                             <ArrowLeft className="mr-2 h-4 w-4" /> Back
                         </Button>
                         <Button
-                            onClick={() => setStep(5)}
-                            className="rounded-full px-8 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg shadow-primary/20 transition-all hover:scale-105"
-                        >
-                            Next <ArrowRight className="ml-2 h-4 w-4" />
-                        </Button>
-                    </div>
-                </div>
-            )}
-
-            {/* STEP 5: REVIEW */}
-            {step === 5 && (
-                <div className="space-y-8 animate-in fade-in slide-in-from-right-8 duration-500">
-                    <div className="text-center space-y-2">
-                        <h2 className="text-2xl font-serif font-medium">Ready to Launch</h2>
-                        <p className="text-muted-foreground">Review your secure link details.</p>
-                    </div>
-
-                    <div className="bg-card border border-border rounded-2xl p-8 shadow-lg space-y-6">
-                        <div className="flex flex-col sm:flex-row items-start gap-6">
-                            {images[0] && (
-                                <div className="relative w-full sm:w-32 aspect-square rounded-xl overflow-hidden shadow-md border border-border">
-                                    <img src={images[0]} alt="Preview" className="w-full h-full object-cover" />
-                                </div>
-                            )}
-                            <div className="flex-1 space-y-2">
-                                <h3 className="text-xl font-semibold">{itemName}</h3>
-                                <p className="text-sm text-muted-foreground line-clamp-2">{description}</p>
-                                <div className="pt-2 flex items-baseline gap-1">
-                                    <span className="text-sm text-muted-foreground">Price:</span>
-                                    <span className="text-2xl font-bold text-primary">KES {Number(itemPrice).toLocaleString()}</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4 py-6 border-y border-border/50">
-                            <div className="space-y-1">
-                                <span className="text-xs uppercase tracking-wider text-muted-foreground">Protection</span>
-                                <div className="font-medium flex items-center gap-2">
-                                    {escrowMode === 'full_escrow' ? <Shield className="h-4 w-4 text-primary" /> : <AlertTriangle className="h-4 w-4 text-yellow-500" />}
-                                    {escrowMode === 'full_escrow' ? 'Full Escrow' : 'Deposit Only'}
-                                </div>
-                            </div>
-                            <div className="space-y-1">
-                                <span className="text-xs uppercase tracking-wider text-muted-foreground">Delivery Fee</span>
-                                <div className="font-medium">KES {Number(deliveryFee || 0).toLocaleString()}</div>
-                            </div>
-                        </div>
-
-                        <div className="space-y-3">
-                            <Label>Security PIN <span className="text-destructive">*</span></Label>
-                            <Input
-                                value={accessPin}
-                                onChange={(e) => setAccessPin(e.target.value)}
-                                placeholder="e.g. 1234"
-                                className="bg-background h-12"
-                            />
-                            <p className="text-xs text-muted-foreground">Share this PIN only with your buyer.</p>
-                        </div>
-                    </div>
-
-                    <div className="flex flex-col-reverse sm:flex-row justify-between gap-4 pt-4">
-                        <Button variant="outline" onClick={() => setStep(4)} className="rounded-full px-8 py-6 text-lg w-full sm:w-auto hover:bg-muted">
-                            <ArrowLeft className="mr-2 h-5 w-5" /> Back
-                        </Button>
-                        <Button
                             onClick={handleSubmit}
                             disabled={isLoading}
-                            className="rounded-full px-8 py-6 bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-lg shadow-xl shadow-primary/25 transition-all hover:scale-105 w-full sm:w-auto"
+                            className="rounded-full px-8 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg shadow-primary/20 transition-all hover:scale-105"
                         >
-                            {isLoading ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <Sparkles className="h-5 w-5 mr-2" />}
-                            Create Secure Link
+                            {isLoading ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Creating Link...
+                                </>
+                            ) : (
+                                <>
+                                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                                    Create Link
+                                </>
+                            )}
                         </Button>
                     </div>
                 </div>
