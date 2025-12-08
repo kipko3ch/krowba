@@ -512,8 +512,16 @@ export default function PaymentPageClient({ link }: PaymentPageClientProps) {
                                                 <p className={cn("font-medium transition-colors", ['shipped', 'delivered'].includes(orderStatus) ? "text-foreground" : "text-muted-foreground")}>
                                                     Shipped
                                                 </p>
-                                                {orderStatus === 'shipped' && (
+                                                {orderStatus === 'shipped' && !link.refund_status && (
                                                     <p className="text-sm text-primary font-medium animate-pulse">In Transit...</p>
+                                                )}
+                                                {link.refund_status && link.refund_status !== 'none' && (
+                                                    <div className="flex items-center gap-2 mt-1">
+                                                        <XCircle className="h-4 w-4 text-red-500" />
+                                                        <p className="text-sm text-red-500 font-medium">
+                                                            {link.refund_status === 'processed' ? 'Refunded' : 'Refund Processing'}
+                                                        </p>
+                                                    </div>
                                                 )}
 
                                                 {/* Shipping Details */}
