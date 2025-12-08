@@ -34,11 +34,13 @@ interface PayoutHistoryResponse {
         total: number
         totalPages: number
     }
+    error?: string
 }
 
 export function PayoutHistory() {
     const [payouts, setPayouts] = useState<Payout[]>([])
     const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
     const [page, setPage] = useState(1)
     const [pagination, setPagination] = useState({
         page: 1,
@@ -53,16 +55,28 @@ export function PayoutHistory() {
 
     const fetchPayouts = async () => {
         setLoading(true)
+        setError(null)
         try {
+            console.log('[PayoutHistory] Fetching payouts for page:', page)
             const response = await fetch(`/api/seller/payout-history?page=${page}&limit=20`)
             const data: PayoutHistoryResponse = await response.json()
 
+            console.log('[PayoutHistory] Response:', data)
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to fetch payouts')
+            }
+
             if (data.success) {
+                console.log('[PayoutHistory] Payouts received:', data.data.length)
                 setPayouts(data.data)
                 setPagination(data.pagination)
+            } else {
+                throw new Error('Unexpected response format')
             }
         } catch (error) {
-            console.error("Failed to fetch payout history:", error)
+            console.error("[PayoutHistory] Failed to fetch payout history:", error)
+            setError(error instanceof Error ? error.message : "Failed to load payout history")
         } finally {
             setLoading(false)
         }
@@ -98,6 +112,15 @@ export function PayoutHistory() {
                 {loading ? (
                     <div className="flex items-center justify-center py-12">
                         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                    </div>
+                ) : error ? (
+                    <div className="text-center py-12">
+                        <p className="text-destructive font-medium mb-2">Error loading payouts</p>
+                        <p className="text-sm text-muted-foreground mb-4">{error}</p>
+                        <Button variant="outline" onClick={fetchPayouts}>
+                            <RefreshCw className="h-4 w-4 mr-2" />
+                            Try Again
+                        </Button>
                     </div>
                 ) : payouts.length === 0 ? (
                     <div className="text-center py-12 text-muted-foreground">
