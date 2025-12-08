@@ -573,7 +573,7 @@ export default function PaymentPageClient({ link }: PaymentPageClientProps) {
                                 </div>
 
                                 {/* Buyer Actions - 3 Button Flow */}
-                                {orderStatus === 'shipped' && (
+                                {orderStatus === 'shipped' && !link.refund_status && (
                                     !selectedAction ? (
                                         <div className="space-y-3">
                                             {/* Button 1: Accept Item */}

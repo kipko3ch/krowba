@@ -134,6 +134,7 @@ export default async function LinkPage({ params }: Props) {
         seller: sellerDetails,
         transaction_id: transactionData?.id || null,
         confirmation_id: deliveryConfirmation?.id || null,
+        refund_status: transactionData?.refund_status || null,
     }
 
     return <LinkPageClient link={linkWithDetails} />
