@@ -21,11 +21,13 @@ import {
     Clock,
     XCircle,
     Sun,
-    Moon
+    Moon,
+    AlertTriangle
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { CometCard } from "@/components/ui/comet-card"
 import { useTheme } from "next-themes"
+import { ImageUploader } from "@/components/seller/image-uploader"
 
 interface PaymentPageClientProps {
     link: any
@@ -47,6 +49,11 @@ export default function PaymentPageClient({ link }: PaymentPageClientProps) {
     // Order Status State (for post-payment view)
     const [orderStatus, setOrderStatus] = useState(link.shipping_status || 'pending')
     const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
+
+    // 3-Button Confirmation Flow State
+    const [selectedAction, setSelectedAction] = useState<null | "reject" | "not-received">(null)
+    const [issueDescription, setIssueDescription] = useState("")
+    const [evidencePhotos, setEvidencePhotos] = useState<string[]>([])
 
     // Check if sold or if returned from successful payment
     const isSold = link.status === 'sold' || searchParams.get('status') === 'success'
@@ -94,40 +101,6 @@ export default function PaymentPageClient({ link }: PaymentPageClientProps) {
             window.location.href = data.data.authorization_url
         } catch (error) {
             console.error("Payment error:", error)
-            toast.error("Failed to initiate payment. Please try again.")
-            setIsProcessing(false)
-        }
-    }
-
-    const handleConfirmDelivery = async () => {
-        if (!confirm("Are you sure you have received the item? This will release funds to the seller.")) return;
-
-        setIsUpdatingStatus(true)
-        try {
-            const response = await fetch("/api/orders/update-status", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    linkId: link.id,
-                    status: 'delivered',
-                    action: 'confirm_delivery'
-                }),
-            })
-
-            if (!response.ok) throw new Error("Failed to confirm delivery")
-
-            setOrderStatus('delivered')
-
-            // Dynamic import for confetti to avoid SSR issues
-            const confetti = (await import("canvas-confetti")).default
-            confetti({
-                particleCount: 100,
-                spread: 70,
-                origin: { y: 0.6 }
-            })
-            toast.success("Delivery confirmed! Funds released.")
-        } catch (error) {
-            toast.error("Failed to confirm delivery")
         } finally {
             setIsUpdatingStatus(false)
         }
@@ -467,20 +440,107 @@ export default function PaymentPageClient({ link }: PaymentPageClientProps) {
                                     </div>
                                 </div>
 
-                                {/* Buyer Actions */}
+                                {/* Buyer Actions - 3 Button Flow */}
                                 {orderStatus === 'shipped' && (
-                                    <div className="space-y-3">
-                                        <Button
-                                            onClick={handleConfirmDelivery}
-                                            disabled={isUpdatingStatus}
-                                            className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl text-lg shadow-[0_0_20px_-5px_var(--primary)]"
-                                        >
-                                            {isUpdatingStatus ? <Loader2 className="animate-spin" /> : "I Have Received the Item"}
-                                        </Button>
-                                        <p className="text-xs text-center text-muted-foreground">
-                                            Clicking this releases the funds to the seller immediately.
-                                        </p>
-                                    </div>
+                                    !selectedAction ? (
+                                        <div className="space-y-3">
+                                            {/* Button 1: Accept Item */}
+                                            <Button
+                                                onClick={handleConfirmDelivery}
+                                                disabled={isUpdatingStatus}
+                                                className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl text-lg shadow-[0_0_20px_-5px_var(--primary)]"
+                                            >
+                                                {isUpdatingStatus ? <Loader2 className="animate-spin" /> : (
+                                                    <span className="flex items-center gap-2">
+                                                        <CheckCircle2 className="h-5 w-5" />
+                                                        Item Received & OK → Release Funds
+                                                    </span>
+                                                )}
+                                            </Button>
+
+                                            {/* Button 2: Reject Item */}
+                                            <Button
+                                                onClick={() => setSelectedAction("reject")}
+                                                variant="outline"
+                                                className="w-full h-12 border-yellow-500 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-950 rounded-xl"
+                                            >
+                                                <AlertTriangle className="h-4 w-4 mr-2" />
+                                                Item Received But Not As Described
+                                            </Button>
+
+                                            {/* Button 3: Not Received */}
+                                            <Button
+                                                onClick={() => setSelectedAction("not-received")}
+                                                variant="outline"
+                                                className="w-full h-12 rounded-xl"
+                                            >
+                                                <XCircle className="h-4 w-4 mr-2" />
+                                                Item Not Received
+                                            </Button>
+
+                                            <p className="text-xs text-center text-muted-foreground mt-3">
+                                                <ShieldCheck className="inline h-3 w-3 mr-1" />
+                                                Your payment is protected by Krowba escrow
+                                            </p>
+                                        </div>
+                                    ) : selectedAction === "reject" ? (
+                                        <div className="space-y-4">
+                                            <div className="border border-border p-4 rounded-lg">
+                                                <h3 className="font-medium mb-3">What's different from the listing?</h3>
+                                                <textarea
+                                                    className="w-full border border-border p-3 text-sm min-h-[100px] bg-background rounded-lg"
+                                                    placeholder="Describe the differences (e.g., wrong size, damaged, missing parts)"
+                                                    value={issueDescription}
+                                                    onChange={(e) => setIssueDescription(e.target.value)}
+                                                />
+
+                                                <div className="mt-4">
+                                                    <Label className="mb-2 block">Upload Evidence (Optional)</Label>
+                                                    <ImageUploader images={evidencePhotos} onImagesChange={setEvidencePhotos} maxImages={5} folder="evidence" />
+                                                </div>
+                                            </div>
+
+                                            <Button
+                                                onClick={handleRejectItem}
+                                                variant="destructive"
+                                                className="w-full h-12 rounded-xl"
+                                                disabled={isUpdatingStatus || !issueDescription.trim()}
+                                            >
+                                                {isUpdatingStatus ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                                                Submit & Request Refund
+                                            </Button>
+
+                                            <Button onClick={() => setSelectedAction(null)} variant="ghost" className="w-full">
+                                                Cancel
+                                            </Button>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            <div className="border border-border p-4 rounded-lg">
+                                                <h3 className="font-medium mb-3">Delivery Issue</h3>
+                                                <textarea
+                                                    className="w-full border border-border p-3 text-sm min-h-[100px] bg-background rounded-lg"
+                                                    placeholder="When was it supposed to arrive? Any other details..."
+                                                    value={issueDescription}
+                                                    onChange={(e) => setIssueDescription(e.target.value)}
+                                                />
+                                            </div>
+
+                                            <Button
+                                                onClick={handleNotReceived}
+                                                variant="destructive"
+                                                className="w-full h-12 rounded-xl"
+                                                disabled={isUpdatingStatus || !issueDescription.trim()}
+                                            >
+                                                {isUpdatingStatus ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                                                Request Refund
+                                            </Button>
+
+                                            <Button onClick={() => setSelectedAction(null)} variant="ghost" className="w-full">
+                                                Cancel
+                                            </Button>
+                                        </div>
+                                    )
                                 )}
 
                                 {orderStatus === 'delivered' && (
