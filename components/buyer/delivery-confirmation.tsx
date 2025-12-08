@@ -1,9 +1,13 @@
+```
 "use client"
 
 import { useState } from "react"
 import Link from "next/link"
 import { format } from "date-fns"
 import { Button } from "@/components/ui/button"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
+import { ImageUploader } from "@/components/seller/image-uploader"
 import { toast } from "sonner"
 import { Loader2, Package, Truck, CheckCircle, AlertTriangle, XCircle, Shield } from "lucide-react"
 
@@ -46,14 +50,15 @@ interface DeliveryConfirmationProps {
 
 export function DeliveryConfirmation({ confirmation, shippingProof }: DeliveryConfirmationProps) {
   const [isLoading, setIsLoading] = useState(false)
-  const [isDisputing, setIsDisputing] = useState(false)
-  const [status, setStatus] = useState<"idle" | "confirmed" | "disputed">("idle")
-  const [disputeReason, setDisputeReason] = useState("")
+  const [selectedAction, setSelectedAction] = useState<null | "reject" | "not-received">(null)
+  const [status, setStatus] = useState<"idle" | "confirmed" | "refunded">("idle")
+  const [issueDescription, setIssueDescription] = useState("")
+  const [evidencePhotos, setEvidencePhotos] = useState<string[]>([])
 
   const link = confirmation.krowba_links
   const transaction = confirmation.transactions
 
-  const handleConfirm = async () => {
+  const handleAcceptItem = async () => {
     setIsLoading(true)
 
     try {
@@ -81,8 +86,8 @@ export function DeliveryConfirmation({ confirmation, shippingProof }: DeliveryCo
     }
   }
 
-  const handleDispute = async () => {
-    if (!disputeReason.trim()) {
+  const handleRejectItem = async () => {
+    if (!issueDescription.trim()) {
       toast.error("Please describe the issue")
       return
     }
@@ -90,27 +95,88 @@ export function DeliveryConfirmation({ confirmation, shippingProof }: DeliveryCo
     setIsLoading(true)
 
     try {
-      const response = await fetch("/api/disputes/create", {
+      // 1. Save evidence
+      const evidenceResponse = await fetch("/api/delivery/reject", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          transaction_id: confirmation.transaction_id,
-          krowba_link_id: confirmation.krowba_link_id,
-          reason: disputeReason,
-          initiated_by: "buyer",
+          confirmation_id: confirmation.id,
+          reason: issueDescription,
+          evidence_photos: evidencePhotos,
         }),
       })
 
-      const result = await response.json()
-
-      if (!response.ok) {
-        throw new Error(result.error || "Failed to submit dispute")
+      if (!evidenceResponse.ok) {
+        throw new Error("Failed to save evidence")
       }
 
-      setStatus("disputed")
-      toast.success("Dispute submitted. We will review and contact you.")
+      // 2. Trigger refund
+      const refundResponse = await fetch("/api/payments/refund", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          transactionId: confirmation.transaction_id,
+          reason: `Buyer rejected: ${ issueDescription } `,
+          initiatedBy: "buyer",
+        }),
+      })
+
+      const refundResult = await refundResponse.json()
+
+      if (!refundResponse.ok) {
+        throw new Error(refundResult.error || "Refund failed")
+      }
+
+      setStatus("refunded")
+      toast.success("Refund requested. Funds will be returned within 3-5 business days.")
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to submit")
+      toast.error(error instanceof Error ? error.message : "Failed to process refund")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleNotReceived = async () => {
+    if (!issueDescription.trim()) {
+      toast.error("Please describe when it was supposed to arrive")
+      return
+    }
+
+    setIsLoading(true)
+
+    try {
+      // Save evidence
+      await fetch("/api/delivery/reject", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          confirmation_id: confirmation.id,
+          reason: `Item not received: ${ issueDescription } `,
+          evidence_photos: [],
+        }),
+      })
+
+      // Trigger refund
+      const refundResponse = await fetch("/api/payments/refund", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          transactionId: confirmation.transaction_id,
+          reason: `Item not received: ${ issueDescription } `,
+          initiatedBy: "buyer",
+        }),
+      })
+
+      const refundResult = await refundResponse.json()
+
+      if (!refundResponse.ok) {
+        throw new Error(refundResult.error || "Refund failed")
+      }
+
+      setStatus("refunded")
+      toast.success("Refund requested. Funds will be returned within 3-5 business days.")
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to request refund")
     } finally {
       setIsLoading(false)
     }
@@ -133,18 +199,18 @@ export function DeliveryConfirmation({ confirmation, shippingProof }: DeliveryCo
     )
   }
 
-  if (status === "disputed") {
+  if (status === "refunded") {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-background">
         <div className="max-w-md w-full border border-border p-8 text-center">
           <div className="h-16 w-16 bg-yellow-500/10 flex items-center justify-center mx-auto mb-4">
-            <AlertTriangle className="h-8 w-8 text-yellow-600" />
+            <CheckCircle className="h-8 w-8 text-yellow-600" />
           </div>
-          <h1 className="text-2xl font-bold mb-2">Dispute Submitted</h1>
+          <h1 className="text-2xl font-bold mb-2">Refund Requested</h1>
           <p className="text-muted-foreground mb-4">
-            {"We've received your dispute. Our team will review the evidence and contact you within 24 hours."}
+            Your refund has been initiated. Funds will be returned to your account within 3-5 business days.
           </p>
-          <p className="text-sm text-muted-foreground">Reference: {confirmation.confirmation_code}</p>
+          <p className="text-sm text-muted-foreground">You can close this page now.</p>
         </div>
       </div>
     )
@@ -220,7 +286,7 @@ export function DeliveryConfirmation({ confirmation, shippingProof }: DeliveryCo
                       <img
                         key={i}
                         src={url || "/placeholder.svg"}
-                        alt={`Dispatch ${i + 1}`}
+                        alt={`Dispatch ${ i + 1 } `}
                         className="aspect-square object-cover border border-border"
                       />
                     ))}
@@ -244,10 +310,11 @@ export function DeliveryConfirmation({ confirmation, shippingProof }: DeliveryCo
             </div>
           )}
 
-          {/* Confirm/Dispute Actions */}
-          {!isDisputing ? (
-            <div className="space-y-4">
-              <Button onClick={handleConfirm} className="w-full" size="lg" disabled={isLoading}>
+          {/* Confirm/Reject/Not Received Actions */}
+          {!selectedAction ? (
+            <div className="space-y-3">
+              {/* Button 1: Accept Item */}
+              <Button onClick={handleAcceptItem} className="w-full bg-primary hover:bg-primary/90" size="lg" disabled={isLoading}>
                 {isLoading ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -256,14 +323,26 @@ export function DeliveryConfirmation({ confirmation, shippingProof }: DeliveryCo
                 ) : (
                   <>
                     <CheckCircle className="h-4 w-4 mr-2" />
-                    Yes, I Received My Order
+                    Item Received & OK → Release Funds
                   </>
                 )}
               </Button>
 
-              <Button onClick={() => setIsDisputing(true)} variant="outline" className="w-full" size="lg">
+              {/* Button 2: Reject Item */}
+              <Button
+                onClick={() => setSelectedAction("reject")}
+                variant="outline"
+                className="w-full border-yellow-500 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-950"
+                size="lg"
+              >
+                <AlertTriangle className="h-4 w-4 mr-2" />
+                Item Received But Not As Described
+              </Button>
+
+              {/* Button 3: Not Received */}
+              <Button onClick={() => setSelectedAction("not-received")} variant="outline" className="w-full" size="lg">
                 <XCircle className="h-4 w-4 mr-2" />
-                {"No, I Have an Issue"}
+                Item Not Received
               </Button>
 
               <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
@@ -271,30 +350,74 @@ export function DeliveryConfirmation({ confirmation, shippingProof }: DeliveryCo
                 <span>Your payment is protected by Krowba escrow</span>
               </div>
             </div>
-          ) : (
+          ) : selectedAction === "reject" ? (
             <div className="space-y-4">
-              <div className="border border-border p-4">
-                <h3 className="font-medium mb-3">{"What's the issue?"}</h3>
+              <div className="border border-border p-4 rounded-lg">
+                <h3 className="font-medium mb-3">{"What's different from the listing?"}</h3>
                 <textarea
-                  className="w-full border border-border p-3 text-sm min-h-[100px] bg-background"
-                  placeholder="Describe the problem (e.g., item not received, wrong item, damaged, etc.)"
-                  value={disputeReason}
-                  onChange={(e) => setDisputeReason(e.target.value)}
+                  className="w-full border border-border p-3 text-sm min-h-[100px] bg-background rounded-lg"
+                  placeholder="Describe the differences (e.g., wrong size, damaged, missing parts)"
+                  value={issueDescription}
+                  onChange={(e) => setIssueDescription(e.target.value)}
                 />
+
+                <div className="mt-4">
+                  <Label className="mb-2 block">Upload Evidence (Optional)</Label>
+                  <ImageUploader images={evidencePhotos} onImagesChange={setEvidencePhotos} maxImages={5} folder="evidence" />
+                </div>
               </div>
 
-              <Button onClick={handleDispute} variant="destructive" className="w-full" size="lg" disabled={isLoading}>
+              <Button
+                onClick={handleRejectItem}
+                variant="destructive"
+                className="w-full"
+                size="lg"
+                disabled={isLoading || !issueDescription.trim()}
+              >
                 {isLoading ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Submitting...
+                    Processing Refund...
                   </>
                 ) : (
-                  "Submit Dispute"
+                  "Submit & Request Refund"
                 )}
               </Button>
 
-              <Button onClick={() => setIsDisputing(false)} variant="ghost" className="w-full">
+              <Button onClick={() => setSelectedAction(null)} variant="ghost" className="w-full">
+                Cancel
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="border border-border p-4 rounded-lg">
+                <h3 className="font-medium mb-3">Delivery Issue</h3>
+                <textarea
+                  className="w-full border border-border p-3 text-sm min-h-[100px] bg-background rounded-lg"
+                  placeholder="When was it supposed to arrive? Any other details..."
+                  value={issueDescription}
+                  onChange={(e) => setIssueDescription(e.target.value)}
+                />
+              </div>
+
+              <Button
+                onClick={handleNotReceived}
+                variant="destructive"
+                className="w-full"
+                size="lg"
+                disabled={isLoading || !issueDescription.trim()}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  "Request Refund"
+                )}
+              </Button>
+
+              <Button onClick={() => setSelectedAction(null)} variant="ghost" className="w-full">
                 Cancel
               </Button>
             </div>

@@ -62,6 +62,22 @@ export async function POST(request: NextRequest) {
                 await handleTransferFailed(payload.data)
                 break
 
+            case "refund.pending":
+                await handleRefundPending(payload.data)
+                break
+
+            case "refund.processing":
+                await handleRefundProcessing(payload.data)
+                break
+
+            case "refund.needs-attention":
+                await handleRefundNeedsAttention(payload.data)
+                break
+
+            case "refund.failed":
+                await handleRefundFailed(payload.data)
+                break
+
             case "refund.processed":
                 await handleRefundProcessed(payload.data)
                 break
@@ -239,45 +255,210 @@ async function handleTransferFailed(data: PaystackEvent["data"]) {
 
 }
 
+// Handle refund pending
+async function handleRefundPending(data: PaystackEvent["data"]) {
+    const { reference } = data
+    const supabaseAdmin = getSupabaseAdmin()
+
+    // Update refund status in database
+    const { data: refund } = await supabaseAdmin
+        .from("refunds")
+        .select("*")
+        .eq("refund_reference", data.reference || reference)
+        .single()
+
+    if (refund) {
+        await supabaseAdmin
+            .from("refunds")
+            .update({
+                status: "pending",
+                logs: [...(refund.logs as any[]), {
+                    event: "refund.pending",
+                    data: data,
+                    timestamp: new Date().toISOString()
+                }],
+                updated_at: new Date().toISOString()
+            })
+            .eq("id", refund.id)
+
+        // Update transaction
+        await supabaseAdmin
+            .from("transactions")
+            .update({ refund_status: "pending" })
+            .eq("id", refund.transaction_id)
+    }
+
+    console.log(`[Paystack Webhook] Refund pending for reference: ${reference}`)
+}
+
+// Handle refund processing
+async function handleRefundProcessing(data: PaystackEvent["data"]) {
+    const { reference } = data
+    const supabaseAdmin = getSupabaseAdmin()
+
+    const { data: refund } = await supabaseAdmin
+        .from("refunds")
+        .select("*")
+        .eq("refund_reference", data.reference || reference)
+        .single()
+
+    if (refund) {
+        await supabaseAdmin
+            .from("refunds")
+            .update({
+                status: "processing",
+                logs: [...(refund.logs as any[]), {
+                    event: "refund.processing",
+                    data: data,
+                    timestamp: new Date().toISOString()
+                }],
+                updated_at: new Date().toISOString()
+            })
+            .eq("id", refund.id)
+
+        await supabaseAdmin
+            .from("transactions")
+            .update({ refund_status: "processing" })
+            .eq("id", refund.transaction_id)
+    }
+
+    console.log(`[Paystack Webhook] Refund processing for reference: ${reference}`)
+}
+
+// Handle refund needs attention
+async function handleRefundNeedsAttention(data: PaystackEvent["data"]) {
+    const { reference } = data
+    const supabaseAdmin = getSupabaseAdmin()
+
+    const { data: refund } = await supabaseAdmin
+        .from("refunds")
+        .select("*")
+        .eq("refund_reference", data.reference || reference)
+        .single()
+
+    if (refund) {
+        await supabaseAdmin
+            .from("refunds")
+            .update({
+                status: "needs_attention",
+                logs: [...(refund.logs as any[]), {
+                    event: "refund.needs-attention",
+                    data: data,
+                    timestamp: new Date().toISOString()
+                }],
+                updated_at: new Date().toISOString()
+            })
+            .eq("id", refund.id)
+
+        await supabaseAdmin
+            .from("transactions")
+            .update({ refund_status: "needs_attention" })
+            .eq("id", refund.transaction_id)
+
+        // TODO: Send notification to admin for manual review
+        console.warn(`[Paystack Webhook] Refund NEEDS ATTENTION for reference: ${reference}`)
+    }
+}
+
+// Handle refund failed
+async function handleRefundFailed(data: PaystackEvent["data"]) {
+    const { reference } = data
+    const supabaseAdmin = getSupabaseAdmin()
+
+    const { data: refund } = await supabaseAdmin
+        .from("refunds")
+        .select("*")
+        .eq("refund_reference", data.reference || reference)
+        .single()
+
+    if (refund) {
+        await supabaseAdmin
+            .from("refunds")
+            .update({
+                status: "failed",
+                logs: [...(refund.logs as any[]), {
+                    event: "refund.failed",
+                    data: data,
+                    timestamp: new Date().toISOString()
+                }],
+                updated_at: new Date().toISOString()
+            })
+            .eq("id", refund.id)
+
+        await supabaseAdmin
+            .from("transactions")
+            .update({ refund_status: "failed" })
+            .eq("id", refund.transaction_id)
+
+        console.error(`[Paystack Webhook] Refund FAILED for reference: ${reference}`)
+    }
+}
+
 // Handle refund processed
 async function handleRefundProcessed(data: PaystackEvent["data"]) {
     const { reference } = data
     const supabaseAdmin = getSupabaseAdmin()
 
-    // Find transaction by reference
-    const { data: transaction } = await supabaseAdmin
-        .from("transactions")
-        .select("*, escrow_holds(*)")
-        .eq("paystack_reference", reference)
+    // Update refund record
+    const { data: refund } = await supabaseAdmin
+        .from("refunds")
+        .select("*")
+        .eq("refund_reference", data.reference || reference)
         .single()
 
-    if (!transaction) {
-        console.error("[Paystack Webhook] Transaction not found for refund:", reference)
-        return
-    }
-
-    // Update transaction status
-    await supabaseAdmin
-        .from("transactions")
-        .update({ status: "refunded" })
-        .eq("id", transaction.id)
-
-    // Update escrow status
-    if (transaction.escrow_holds?.[0]) {
+    if (refund) {
         await supabaseAdmin
-            .from("escrow_holds")
+            .from("refunds")
+            .update({
+                status: "processed",
+                processed_at: new Date().toISOString(),
+                logs: [...(refund.logs as any[]), {
+                    event: "refund.processed",
+                    data: data,
+                    timestamp: new Date().toISOString()
+                }],
+                updated_at: new Date().toISOString()
+            })
+            .eq("id", refund.id)
+
+        // Find transaction
+        const { data: transaction } = await supabaseAdmin
+            .from("transactions")
+            .select("*, escrow_holds(*)")
+            .eq("id", refund.transaction_id)
+            .single()
+
+        if (!transaction) {
+            console.error("[Paystack Webhook] Transaction not found for refund:", reference)
+            return
+        }
+
+        // Update transaction status
+        await supabaseAdmin
+            .from("transactions")
             .update({
                 status: "refunded",
-                refunded_at: new Date().toISOString(),
+                refund_status: "processed"
             })
-            .eq("id", transaction.escrow_holds[0].id)
+            .eq("id", transaction.id)
+
+        // Update escrow status
+        if (transaction.escrow_holds?.[0]) {
+            await supabaseAdmin
+                .from("escrow_holds")
+                .update({
+                    status: "refunded",
+                    refunded_at: new Date().toISOString(),
+                })
+                .eq("id", transaction.escrow_holds[0].id)
+        }
+
+        // Update link status
+        await supabaseAdmin
+            .from("krowba_links")
+            .update({ status: "cancelled" })
+            .eq("id", transaction.krowba_link_id)
+
+        console.log(`[Paystack Webhook] Refund PROCESSED for transaction ${transaction.id}`)
     }
-
-    // Update link status
-    await supabaseAdmin
-        .from("krowba_links")
-        .update({ status: "cancelled" })
-        .eq("krowba_link_id", transaction.krowba_link_id)
-
-    console.log(`[Paystack Webhook] Refund processed for transaction ${transaction.id}`)
 }
