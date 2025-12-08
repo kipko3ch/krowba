@@ -142,6 +142,12 @@ export function LinksTable({ links }: LinksTableProps) {
                                                     link.shipping_status === 'delivered' ? 'Delivered' : 'Ready to Ship'}
                                             </Badge>
                                         )}
+                                        {/* Show refund status */}
+                                        {(link as any).transactions && (link as any).transactions.some((tx: any) => tx.refund_status && tx.refund_status !== 'none') && (
+                                            <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20 text-xs">
+                                                {(link as any).transactions.find((tx: any) => tx.refund_status && tx.refund_status !== 'none')?.refund_status === 'processed' ? 'Refunded' : 'Refunding'}
+                                            </Badge>
+                                        )}
                                     </div>
                                 </TableCell>
                                 <TableCell>
