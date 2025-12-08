@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { MoreHorizontal, Copy, ExternalLink, Trash2, Eye, QrCode, Truck } from "lucide-react"
+import { MoreHorizontal, Copy, ExternalLink, Trash2, Eye, QrCode, Truck, Edit } from "lucide-react"
 import { toast } from "sonner"
 import { QRCodeSVG } from "qrcode.react"
 import {
@@ -197,11 +197,17 @@ export function LinksTable({ links }: LinksTableProps) {
                                                 {!(link.status === 'sold' && link.shipping_status === 'delivered') && (
                                                     <DropdownMenuItem asChild>
                                                         <Link href={`/dashboard/links/${link.short_code}/edit`}>
-                                                            <Eye className="h-4 w-4 mr-2" />
+                                                            <Edit className="h-4 w-4 mr-2" />
                                                             Edit Link
                                                         </Link>
                                                     </DropdownMenuItem>
                                                 )}
+                                                <DropdownMenuItem asChild>
+                                                    <Link href={`/dashboard/links/${link.short_code}`}>
+                                                        <Eye className="h-4 w-4 mr-2" />
+                                                        View Details
+                                                    </Link>
+                                                </DropdownMenuItem>
                                                 <DropdownMenuItem asChild>
                                                     <Link href={`/pay/${link.short_code}`} target="_blank">
                                                         <ExternalLink className="h-4 w-4 mr-2" />
