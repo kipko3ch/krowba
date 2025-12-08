@@ -101,6 +101,121 @@ export default function PaymentPageClient({ link }: PaymentPageClientProps) {
             window.location.href = data.data.authorization_url
         } catch (error) {
             console.error("Payment error:", error)
+            toast.error("Failed to initiate payment. Please try again.")
+            setIsProcessing(false)
+        }
+    }
+
+    const handleConfirmDelivery = async () => {
+        setIsUpdatingStatus(true)
+        try {
+            const response = await fetch("/api/orders/update-status", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    linkId: link.id,
+                    status: 'delivered',
+                    action: 'confirm_delivery'
+                }),
+            })
+
+            if (!response.ok) throw new Error("Failed to confirm delivery")
+
+            setOrderStatus('delivered')
+
+            toast.success("Delivery confirmed! Funds released to seller.")
+        } catch (error) {
+            toast.error("Failed to confirm delivery. Please try again.")
+        } finally {
+            setIsUpdatingStatus(false)
+        }
+    }
+
+    const handleRejectItem = async () => {
+        if (!issueDescription.trim()) {
+            toast.error("Please describe the issue")
+            return
+        }
+
+        setIsUpdatingStatus(true)
+        try {
+            // Save evidence
+            const evidenceResponse = await fetch("/api/delivery/reject", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    confirmation_id: link.id,
+                    reason: issueDescription,
+                    evidence_photos: evidencePhotos,
+                }),
+            })
+
+            if (!evidenceResponse.ok) {
+                throw new Error("Failed to save evidence")
+            }
+
+            // Trigger refund
+            const refundResponse = await fetch("/api/payments/refund", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    transactionId: link.transaction_id,
+                    reason: `Buyer rejected: ${issueDescription}`,
+                    initiatedBy: "buyer",
+                }),
+            })
+
+            if (!refundResponse.ok) {
+                throw new Error("Refund failed")
+            }
+
+            setOrderStatus('refunded')
+            toast.success("Refund requested. Funds will be returned within 3-5 business days.")
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : "Failed to process refund")
+        } finally {
+            setIsUpdatingStatus(false)
+        }
+    }
+
+    const handleNotReceived = async () => {
+        if (!issueDescription.trim()) {
+            toast.error("Please describe when it was supposed to arrive")
+            return
+        }
+
+        setIsUpdatingStatus(true)
+        try {
+            // Save evidence
+            await fetch("/api/delivery/reject", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    confirmation_id: link.id,
+                    reason: `Item not received: ${issueDescription}`,
+                    evidence_photos: [],
+                }),
+            })
+
+            // Trigger refund
+            const refundResponse = await fetch("/api/payments/refund", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    transactionId: link.transaction_id,
+                    reason: `Item not received: ${issueDescription}`,
+                    initiatedBy: "buyer",
+                }),
+            })
+
+            if (!refundResponse.ok) {
+                throw new Error("Refund failed")
+            }
+
+            setOrderStatus('refunded')
+            toast.success("Refund requested. Funds will be returned within 3-5 business days.")
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : "Failed to request refund")
         } finally {
             setIsUpdatingStatus(false)
         }
