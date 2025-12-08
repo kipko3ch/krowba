@@ -6,33 +6,47 @@ export async function POST(request: NextRequest) {
         const supabase = await createClient()
 
         const body = await request.json()
-        const { confirmation_id, reason, evidence_photos } = body
+        const { confirmation_id, transaction_id, reason, evidence_photos } = body
 
-        if (!confirmation_id) {
-            return NextResponse.json({ error: "Confirmation ID required" }, { status: 400 })
+        if (!confirmation_id && !transaction_id) {
+            return NextResponse.json({ error: "Confirmation ID or Transaction ID required" }, { status: 400 })
         }
 
         if (!reason || reason.trim() === "") {
             return NextResponse.json({ error: "Please describe the issue" }, { status: 400 })
         }
 
-        // Get confirmation details
-        const { data: confirmation, error: confError } = await supabase
-            .from("delivery_confirmations")
-            .select("*, transactions(*)")
-            .eq("id", confirmation_id)
-            .single()
+        let actualTransactionId = transaction_id
 
-        if (confError || !confirmation) {
-            return NextResponse.json({ error: "Confirmation not found" }, { status: 404 })
+        // If confirmation_id provided, get the transaction_id from it
+        if (confirmation_id) {
+            const { data: confirmation, error: confError } = await supabase
+                .from("delivery_confirmations")
+                .select("transaction_id")
+                .eq("id", confirmation_id)
+                .single()
+
+            if (confError || !confirmation) {
+                return NextResponse.json({ error: "Confirmation not found" }, { status: 404 })
+            }
+
+            actualTransactionId = confirmation.transaction_id
+
+            // Update delivery confirmation if it exists
+            await supabase
+                .from("delivery_confirmations")
+                .update({
+                    action_type: "reject",
+                })
+                .eq("id", confirmation_id)
         }
 
         // Create delivery evidence record
         const { data: evidence, error: evidenceError } = await supabase
             .from("delivery_evidence")
             .insert({
-                transaction_id: confirmation.transaction_id,
-                delivery_confirmation_id: confirmation_id,
+                transaction_id: actualTransactionId,
+                delivery_confirmation_id: confirmation_id || null,
                 evidence_type: "reject",
                 description: reason,
                 evidence_photos: evidence_photos || [],
@@ -45,19 +59,10 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Failed to save evidence" }, { status: 500 })
         }
 
-        // Update delivery confirmation
-        await supabase
-            .from("delivery_confirmations")
-            .update({
-                action_type: "reject",
-                evidence_id: evidence.id,
-            })
-            .eq("id", confirmation_id)
-
         // Update transaction status
-        await supabase.from("transactions").update({ status: "rejected" }).eq("id", confirmation.transaction_id)
+        await supabase.from("transactions").update({ status: "rejected" }).eq("id", actualTransactionId)
 
-        console.log(`[Reject Delivery] Evidence ${evidence.id} saved for transaction ${confirmation.transaction_id}`)
+        console.log(`[Reject Delivery] Evidence ${evidence.id} saved for transaction ${actualTransactionId}`)
 
         return NextResponse.json({
             success: true,

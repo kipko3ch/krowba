@@ -137,11 +137,6 @@ export default function PaymentPageClient({ link }: PaymentPageClientProps) {
             return
         }
 
-        if (!link.confirmation_id) {
-            toast.error("No delivery confirmation found. Please contact support.")
-            return
-        }
-
         if (!link.transaction_id) {
             toast.error("No transaction found. Please contact support.")
             return
@@ -149,12 +144,13 @@ export default function PaymentPageClient({ link }: PaymentPageClientProps) {
 
         setIsUpdatingStatus(true)
         try {
-            // Save evidence
+            // Save evidence - use transaction_id if confirmation_id not available
             const evidenceResponse = await fetch("/api/delivery/reject", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    confirmation_id: link.confirmation_id,
+                    transaction_id: link.transaction_id,
+                    confirmation_id: link.confirmation_id || null,
                     reason: issueDescription,
                     evidence_photos: evidencePhotos,
                 }),
@@ -197,11 +193,6 @@ export default function PaymentPageClient({ link }: PaymentPageClientProps) {
             return
         }
 
-        if (!link.confirmation_id) {
-            toast.error("No delivery confirmation found. Please contact support.")
-            return
-        }
-
         if (!link.transaction_id) {
             toast.error("No transaction found. Please contact support.")
             return
@@ -209,12 +200,13 @@ export default function PaymentPageClient({ link }: PaymentPageClientProps) {
 
         setIsUpdatingStatus(true)
         try {
-            // Save evidence
+            // Save evidence - use transaction_id if confirmation_id not available
             await fetch("/api/delivery/reject", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    confirmation_id: link.confirmation_id,
+                    transaction_id: link.transaction_id,
+                    confirmation_id: link.confirmation_id || null,
                     reason: `Item not received: ${issueDescription}`,
                     evidence_photos: [],
                 }),
