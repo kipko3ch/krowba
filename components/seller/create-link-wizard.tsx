@@ -353,9 +353,9 @@ export function CreateLinkWizard() {
                 <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <div className="text-center space-y-4">
                         <div className="relative inline-block">
-                            <div className="absolute inset-0 bg-blue-500/30 blur-2xl rounded-full animate-pulse" />
-                            <div className="bg-card border border-blue-500/30 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto relative shadow-[0_0_30px_-5px_rgba(59,130,246,0.4)]">
-                                <Sparkles className="h-8 w-8 text-blue-500" />
+                            <div className="absolute inset-0 bg-[#44F91F]/30 blur-2xl rounded-full animate-pulse" />
+                            <div className="bg-card border border-[#44F91F]/30 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto relative shadow-[0_0_30px_-5px_rgba(68,249,31,0.4)]">
+                                <Sparkles className="h-8 w-8 text-[#44F91F]" />
                             </div>
                         </div>
                         <div>
@@ -367,7 +367,7 @@ export function CreateLinkWizard() {
                     {/* Upload Area */}
                     {images.length === 0 && !isAnalyzing && (
                         <div className="space-y-6">
-                            <div className="bg-card border border-border hover:border-blue-500/30 rounded-2xl overflow-hidden transition-all duration-500">
+                            <div className="bg-card border border-border hover:border-[#44F91F]/30 rounded-2xl overflow-hidden transition-all duration-500">
                                 <FileUpload onChange={handleFileUpload} />
                             </div>
 
