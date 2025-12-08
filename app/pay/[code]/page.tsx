@@ -97,13 +97,43 @@ export default async function LinkPage({ params }: Props) {
         console.log("No seller_id on link")
     }
 
+    // Fetch transaction for this link (if exists)
+    let transactionData = null
+    let deliveryConfirmation = null
+    if (link.status === 'sold') {
+        const { data: transaction, error: txError } = await supabase
+            .from("transactions")
+            .select("*")
+            .eq("krowba_link_id", link.id)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .single()
+
+        if (!txError && transaction) {
+            transactionData = transaction
+
+            // Fetch delivery confirmation if exists
+            const { data: confirmation } = await supabase
+                .from("delivery_confirmations")
+                .select("*")
+                .eq("transaction_id", transaction.id)
+                .single()
+
+            if (confirmation) {
+                deliveryConfirmation = confirmation
+            }
+        }
+    }
+
     // Construct the object expected by client
     const linkWithDetails = {
         ...link,
         items: {
             description: itemDescription
         },
-        seller: sellerDetails
+        seller: sellerDetails,
+        transaction_id: transactionData?.id || null,
+        confirmation_id: deliveryConfirmation?.id || null,
     }
 
     return <LinkPageClient link={linkWithDetails} />

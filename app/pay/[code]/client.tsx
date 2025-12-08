@@ -137,6 +137,16 @@ export default function PaymentPageClient({ link }: PaymentPageClientProps) {
             return
         }
 
+        if (!link.confirmation_id) {
+            toast.error("No delivery confirmation found. Please contact support.")
+            return
+        }
+
+        if (!link.transaction_id) {
+            toast.error("No transaction found. Please contact support.")
+            return
+        }
+
         setIsUpdatingStatus(true)
         try {
             // Save evidence
@@ -144,14 +154,15 @@ export default function PaymentPageClient({ link }: PaymentPageClientProps) {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    confirmation_id: link.id,
+                    confirmation_id: link.confirmation_id,
                     reason: issueDescription,
                     evidence_photos: evidencePhotos,
                 }),
             })
 
             if (!evidenceResponse.ok) {
-                throw new Error("Failed to save evidence")
+                const errData = await evidenceResponse.json()
+                throw new Error(errData.error || "Failed to save evidence")
             }
 
             // Trigger refund
@@ -166,12 +177,14 @@ export default function PaymentPageClient({ link }: PaymentPageClientProps) {
             })
 
             if (!refundResponse.ok) {
-                throw new Error("Refund failed")
+                const errData = await refundResponse.json()
+                throw new Error(errData.error || "Refund failed")
             }
 
             setOrderStatus('refunded')
             toast.success("Refund requested. Funds will be returned within 3-5 business days.")
         } catch (error) {
+            console.error("Reject error:", error)
             toast.error(error instanceof Error ? error.message : "Failed to process refund")
         } finally {
             setIsUpdatingStatus(false)
@@ -184,6 +197,16 @@ export default function PaymentPageClient({ link }: PaymentPageClientProps) {
             return
         }
 
+        if (!link.confirmation_id) {
+            toast.error("No delivery confirmation found. Please contact support.")
+            return
+        }
+
+        if (!link.transaction_id) {
+            toast.error("No transaction found. Please contact support.")
+            return
+        }
+
         setIsUpdatingStatus(true)
         try {
             // Save evidence
@@ -191,7 +214,7 @@ export default function PaymentPageClient({ link }: PaymentPageClientProps) {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    confirmation_id: link.id,
+                    confirmation_id: link.confirmation_id,
                     reason: `Item not received: ${issueDescription}`,
                     evidence_photos: [],
                 }),
@@ -209,12 +232,14 @@ export default function PaymentPageClient({ link }: PaymentPageClientProps) {
             })
 
             if (!refundResponse.ok) {
-                throw new Error("Refund failed")
+                const errData = await refundResponse.json()
+                throw new Error(errData.error || "Refund failed")
             }
 
             setOrderStatus('refunded')
             toast.success("Refund requested. Funds will be returned within 3-5 business days.")
         } catch (error) {
+            console.error("Not received error:", error)
             toast.error(error instanceof Error ? error.message : "Failed to request refund")
         } finally {
             setIsUpdatingStatus(false)
