@@ -11,7 +11,7 @@ import { FileUpload } from "@/components/ui/file-upload"
 import { MovingBorderContainer } from "@/components/ui/moving-border"
 import { CometCard } from "@/components/ui/comet-card"
 import { toast } from "sonner"
-import { Loader2, Sparkles, Shield, AlertTriangle, ArrowRight, CheckCircle2, ArrowLeft, ScanLine, Gem, Copy, Share2, ExternalLink, Camera } from "lucide-react"
+import { Loader2, Sparkles, Shield, AlertTriangle, ArrowRight, CheckCircle2, ArrowLeft, ScanLine, Gem, Copy, Share2, ExternalLink, Camera, HelpCircle } from "lucide-react"
 import type { EscrowMode } from "@/types"
 import { cn } from "@/lib/utils"
 import QRCode from "react-qr-code"
@@ -355,7 +355,7 @@ export function CreateLinkWizard() {
                         <div className="relative inline-block">
                             <div className="absolute inset-0 bg-[#44F91F]/30 blur-2xl rounded-full animate-pulse" />
                             <div className="bg-card border border-[#44F91F]/30 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto relative shadow-[0_0_30px_-5px_rgba(68,249,31,0.4)]">
-                                <Sparkles className="h-8 w-8 text-[#44F91F]" />
+                                <HelpCircle className="h-8 w-8 text-[#44F91F]" />
                             </div>
                         </div>
                         <div>
