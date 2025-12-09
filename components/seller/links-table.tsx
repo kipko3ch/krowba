@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { MoreHorizontal, Copy, ExternalLink, Trash2, Eye, QrCode, Truck, Edit } from "lucide-react"
+import { MoreHorizontal, Copy, ExternalLink, Trash2, Eye, QrCode, Truck, Edit, Info } from "lucide-react"
 import { toast } from "sonner"
 import { QRCodeSVG } from "qrcode.react"
 import {
@@ -47,40 +47,46 @@ interface LinksTableProps {
     showTabs?: boolean
 }
 
-const STATUS_FILTERS = [
-    { label: "All", value: "all", color: "text-foreground", count: 0 },
-    { label: "Active", value: "active", color: "text-[#44f91f]", count: 0 },
-    { label: "Paid", value: "paid", color: "text-blue-500", count: 0 },
-    { label: "Completed", value: "completed", color: "text-gray-500", count: 0 },
-    { label: "Cancelled", value: "cancelled", color: "text-red-500", count: 0 },
+const WORKFLOW_FILTERS = [
+    { label: "All Orders", value: "all", color: "text-foreground" },
+    { label: "Awaiting Ship", value: "awaiting_ship", color: "text-blue-500" },
+    { label: "On Transit", value: "on_transit", color: "text-yellow-500" },
+    { label: "Delivered", value: "delivered", color: "text-[#44f91f]" },
+    { label: "Rejected/Refunded", value: "rejected", color: "text-red-500" },
 ]
 
 export function LinksTable({ links, showTabs = false }: LinksTableProps) {
     const router = useRouter()
     const [deleteId, setDeleteId] = useState<string | null>(null)
     const [qrLink, setQrLink] = useState<KrowbaLink | null>(null)
+    const [detailsLink, setDetailsLink] = useState<KrowbaLink | null>(null)
     const [isDeleting, setIsDeleting] = useState(false)
     const [activeFilter, setActiveFilter] = useState("all")
 
-    // Calculate counts and filter links
-    const statusCounts = links.reduce((acc, link) => {
-        const status = link.status === 'sold' ? 'paid' : link.status
-        acc[status] = (acc[status] || 0) + 1
+    // Helper to determine workflow stage
+    const getWorkflowStage = (link: KrowbaLink) => {
+        const hasRefund = (link as any).transactions?.some((tx: any) =>
+            tx.refund_status && tx.refund_status !== 'none'
+        )
+
+        if (hasRefund) return "rejected"
+        if (link.status !== 'sold' && link.status !== 'paid') return null // Not paid yet
+        if (link.shipping_status === 'delivered') return "delivered"
+        if (link.shipping_status === 'shipped') return "on_transit"
+        return "awaiting_ship" // Paid but not shipped
+    }
+
+    // Filter links by workflow stage
+    const filteredLinks = activeFilter === "all"
+        ? links.filter(l => ['sold', 'paid'].includes(l.status)) // Only show paid orders
+        : links.filter(link => getWorkflowStage(link) === activeFilter)
+
+    // Calculate counts
+    const workflowCounts = links.reduce((acc, link) => {
+        const stage = getWorkflowStage(link)
+        if (stage) acc[stage] = (acc[stage] || 0) + 1
         return acc
     }, {} as Record<string, number>)
-
-    const filteredLinks = activeFilter === "all"
-        ? links
-        : links.filter(link => {
-            const status = link.status === 'sold' ? 'paid' : link.status
-            return status === activeFilter
-        })
-
-    STATUS_FILTERS[0].count = links.length
-    STATUS_FILTERS[1].count = statusCounts['active'] || 0
-    STATUS_FILTERS[2].count = statusCounts['paid'] || 0
-    STATUS_FILTERS[3].count = statusCounts['completed'] || 0
-    STATUS_FILTERS[4].count = statusCounts['cancelled'] || 0
 
     const copyToClipboard = (text: string) => {
         navigator.clipboard.writeText(text)
@@ -111,62 +117,72 @@ export function LinksTable({ links, showTabs = false }: LinksTableProps) {
         }
     }
 
-    const getStatusColor = (status: string) => {
-        switch (status) {
-            case "active":
-                return "bg-[#44f91f]/10 text-[#44f91f] border-[#44f91f]/20"
-            case "paid":
-                return "bg-blue-500/10 text-blue-500 border-blue-500/20"
-            case "completed":
-                return "bg-gray-500/10 text-gray-500 border-gray-500/20"
-            case "cancelled":
-                return "bg-red-500/10 text-red-500 border-red-500/20"
+    const getStatusBadge = (link: KrowbaLink) => {
+        const stage = getWorkflowStage(link)
+
+        switch (stage) {
+            case "awaiting_ship":
+                return <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20">Awaiting Ship</Badge>
+            case "on_transit":
+                return <Badge className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">On Transit</Badge>
+            case "delivered":
+                return <Badge className="bg-[#44f91f]/10 text-[#44f91f] border-[#44f91f]/20">Delivered</Badge>
+            case "rejected":
+                return <Badge className="bg-red-500/10 text-red-500 border-red-500/20">Refunded</Badge>
             default:
-                return "bg-gray-500/10 text-gray-500 border-gray-500/20"
+                return <Badge variant="outline">Pending Payment</Badge>
         }
     }
 
-    if (links.length === 0) {
+    if (filteredLinks.length === 0) {
         return (
             <div className="text-center py-12 border border-dashed rounded-lg">
-                <h3 className="text-lg font-medium">No links created yet</h3>
-                <p className="text-muted-foreground mt-1">Create your first payment link to get started.</p>
+                <h3 className="text-lg font-medium">No orders found</h3>
+                <p className="text-muted-foreground mt-1">
+                    {activeFilter === "all" ? "No paid orders yet" : `No orders in ${WORKFLOW_FILTERS.find(f => f.value === activeFilter)?.label}`}
+                </p>
             </div>
         )
     }
 
     return (
         <>
-            {/* Status Filter Tabs */}
+            {/* Workflow Filter Tabs */}
             {showTabs && (
                 <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2">
-                    {STATUS_FILTERS.map((filter) => (
-                        <button
-                            key={filter.value}
-                            onClick={() => setActiveFilter(filter.value)}
-                            className={cn(
-                                "flex items-center gap-2 px-4 py-2 rounded-lg border transition-all whitespace-nowrap",
-                                activeFilter === filter.value
-                                    ? "bg-card border-border shadow-sm"
-                                    : "bg-transparent border-transparent hover:bg-muted/50"
-                            )}
-                        >
-                            <span className={cn(
-                                "text-sm font-medium",
-                                activeFilter === filter.value ? filter.color : "text-muted-foreground"
-                            )}>
-                                {filter.label}
-                            </span>
-                            <span className={cn(
-                                "text-xs px-2 py-0.5 rounded-full",
-                                activeFilter === filter.value
-                                    ? cn("bg-muted", filter.color)
-                                    : "bg-muted/50 text-muted-foreground"
-                            )}>
-                                {filter.count}
-                            </span>
-                        </button>
-                    ))}
+                    {WORKFLOW_FILTERS.map((filter) => {
+                        const count = filter.value === "all"
+                            ? links.filter(l => ['sold', 'paid'].includes(l.status)).length
+                            : workflowCounts[filter.value] || 0
+
+                        return (
+                            <button
+                                key={filter.value}
+                                onClick={() => setActiveFilter(filter.value)}
+                                className={cn(
+                                    "flex items-center gap-2 px-4 py-2 rounded-lg border transition-all whitespace-nowrap",
+                                    activeFilter === filter.value
+                                        ? "bg-card border-border shadow-sm"
+                                        : "bg-transparent border-transparent hover:bg-muted/50"
+                                )}
+                            >
+                                <span className={cn(
+                                    "text-sm font-medium",
+                                    activeFilter === filter.value ? filter.color : "text-muted-foreground"
+                                )}>
+                                    {filter.label}
+                                </span>
+                                <span className={cn(
+                                    "text-xs px-2 py-0.5 rounded-full",
+                                    activeFilter === filter.value
+                                        ? cn("bg-muted", filter.color)
+                                        : "bg-muted/50 text-muted-foreground"
+                                )}>
+                                    {count}
+                                </span>
+                            </button>
+                        )
+                    })}
                 </div>
             )}
 
@@ -177,17 +193,17 @@ export function LinksTable({ links, showTabs = false }: LinksTableProps) {
                             <TableHead className="font-semibold">Item</TableHead>
                             <TableHead className="font-semibold">Price</TableHead>
                             <TableHead className="font-semibold">Status</TableHead>
-                            <TableHead className="font-semibold">Created</TableHead>
+                            <TableHead className="font-semibold">Date</TableHead>
                             <TableHead className="text-right font-semibold">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {filteredLinks.map((link) => (
                             <TableRow key={link.id} className="border-b border-border/50 hover:bg-muted/30">
-                                <TableCell className="font-medium">
+                                <TableCell className="font-medium max-w-[200px]">
                                     <div className="flex flex-col">
-                                        <span className="text-foreground">{link.item_name}</span>
-                                        <span className="text-xs text-muted-foreground truncate max-w-[200px] font-mono">
+                                        <span className="text-foreground truncate">{link.item_name}</span>
+                                        <span className="text-xs text-muted-foreground font-mono">
                                             {link.short_code}
                                         </span>
                                     </div>
@@ -196,29 +212,24 @@ export function LinksTable({ links, showTabs = false }: LinksTableProps) {
                                     KES {(link.item_price + link.delivery_fee).toLocaleString()}
                                 </TableCell>
                                 <TableCell>
-                                    <div className="flex flex-col gap-1.5">
-                                        <Badge variant="outline" className={getStatusColor(link.status)}>
-                                            {link.status === 'sold' ? 'Paid' : link.status}
-                                        </Badge>
-                                        {link.status === 'sold' && (
-                                            <Badge variant="secondary" className="text-xs">
-                                                {link.shipping_status === 'shipped' ? 'Shipped' :
-                                                    link.shipping_status === 'delivered' ? 'Delivered' : 'Ready to Ship'}
-                                            </Badge>
-                                        )}
-                                        {(link as any).transactions && (link as any).transactions.some((tx: any) => tx.refund_status && tx.refund_status !== 'none') && (
-                                            <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20 text-xs">
-                                                {(link as any).transactions.find((tx: any) => tx.refund_status && tx.refund_status !== 'none')?.refund_status === 'processed' ? 'Refunded' : 'Refunding'}
-                                            </Badge>
-                                        )}
-                                    </div>
+                                    {getStatusBadge(link)}
                                 </TableCell>
-                                <TableCell className="text-muted-foreground">
+                                <TableCell className="text-muted-foreground text-sm">
                                     {new Date(link.created_at).toLocaleDateString()}
                                 </TableCell>
                                 <TableCell className="text-right">
                                     <div className="flex items-center justify-end gap-2">
-                                        {link.status === 'sold' && link.shipping_status !== 'shipped' && link.shipping_status !== 'delivered' ? (
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => setDetailsLink(link)}
+                                            className="h-8"
+                                        >
+                                            <Info className="h-4 w-4 mr-1" />
+                                            Details
+                                        </Button>
+
+                                        {getWorkflowStage(link) === 'awaiting_ship' && (
                                             <Button
                                                 variant="outline"
                                                 size="sm"
@@ -228,48 +239,18 @@ export function LinksTable({ links, showTabs = false }: LinksTableProps) {
                                                 <Truck className="h-3.5 w-3.5 mr-1.5" />
                                                 Ship
                                             </Button>
-                                        ) : link.status === 'active' ? (
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="h-8 text-muted-foreground"
-                                                disabled
-                                                title="Waiting for payment"
-                                            >
-                                                <Truck className="h-3.5 w-3.5 mr-1.5" />
-                                                Ship
-                                            </Button>
-                                        ) : null}
-
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() => copyToClipboard(`${window.location.origin}/pay/${link.short_code}`)}
-                                            title="Copy Link"
-                                        >
-                                            <Copy className="h-4 w-4" />
-                                        </Button>
+                                        )}
 
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon">
+                                                <Button variant="ghost" size="icon" className="h-8 w-8">
                                                     <MoreHorizontal className="h-4 w-4" />
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
-                                                {!(link.status === 'sold' && link.shipping_status === 'delivered') && (
-                                                    <DropdownMenuItem asChild>
-                                                        <Link href={`/dashboard/links/${link.short_code}/edit`}>
-                                                            <Edit className="h-4 w-4 mr-2" />
-                                                            Edit Link
-                                                        </Link>
-                                                    </DropdownMenuItem>
-                                                )}
-                                                <DropdownMenuItem asChild>
-                                                    <Link href={`/dashboard/links/${link.short_code}`}>
-                                                        <Eye className="h-4 w-4 mr-2" />
-                                                        View Details
-                                                    </Link>
+                                                <DropdownMenuItem onClick={() => copyToClipboard(`${window.location.origin}/pay/${link.short_code}`)}>
+                                                    <Copy className="h-4 w-4 mr-2" />
+                                                    Copy Link
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem asChild>
                                                     <Link href={`/pay/${link.short_code}`} target="_blank">
@@ -281,12 +262,20 @@ export function LinksTable({ links, showTabs = false }: LinksTableProps) {
                                                     <QrCode className="h-4 w-4 mr-2" />
                                                     Show QR Code
                                                 </DropdownMenuItem>
+                                                {getWorkflowStage(link) !== 'delivered' && (
+                                                    <DropdownMenuItem asChild>
+                                                        <Link href={`/dashboard/links/${link.short_code}/edit`}>
+                                                            <Edit className="h-4 w-4 mr-2" />
+                                                            Edit Link
+                                                        </Link>
+                                                    </DropdownMenuItem>
+                                                )}
                                                 <DropdownMenuItem
                                                     className="text-red-500 focus:text-red-500"
                                                     onClick={() => setDeleteId(link.id)}
                                                 >
                                                     <Trash2 className="h-4 w-4 mr-2" />
-                                                    Delete Link
+                                                    Delete
                                                 </DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
@@ -298,6 +287,94 @@ export function LinksTable({ links, showTabs = false }: LinksTableProps) {
                 </Table>
             </div>
 
+            {/* Details Dialog */}
+            <Dialog open={!!detailsLink} onOpenChange={(open) => !open && setDetailsLink(null)}>
+                <DialogContent className="bg-background border-border text-foreground sm:max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle>Order Details</DialogTitle>
+                        <DialogDescription className="text-muted-foreground">
+                            Complete information for this order
+                        </DialogDescription>
+                    </DialogHeader>
+                    {detailsLink && (
+                        <div className="space-y-4 py-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <p className="text-xs text-muted-foreground">Item Name</p>
+                                    <p className="font-medium">{detailsLink.item_name}</p>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-muted-foreground">Short Code</p>
+                                    <p className="font-mono text-sm">{detailsLink.short_code}</p>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <p className="text-xs text-muted-foreground">Item Price</p>
+                                    <p className="font-medium">KES {detailsLink.item_price.toLocaleString()}</p>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-muted-foreground">Delivery Fee</p>
+                                    <p className="font-medium">KES {detailsLink.delivery_fee.toLocaleString()}</p>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <p className="text-xs text-muted-foreground">Total Price</p>
+                                    <p className="font-bold text-lg">KES {(detailsLink.item_price + detailsLink.delivery_fee).toLocaleString()}</p>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-muted-foreground">Escrow Mode</p>
+                                    <p className="font-medium capitalize">{detailsLink.escrow_mode?.replace('_', ' ')}</p>
+                                </div>
+                            </div>
+
+                            <div>
+                                <p className="text-xs text-muted-foreground mb-1">Status</p>
+                                {getStatusBadge(detailsLink)}
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <p className="text-xs text-muted-foreground">Created</p>
+                                    <p className="text-sm">{new Date(detailsLink.created_at).toLocaleString()}</p>
+                                </div>
+                                {detailsLink.expires_at && (
+                                    <div>
+                                        <p className="text-xs text-muted-foreground">Expires</p>
+                                        <p className="text-sm">{new Date(detailsLink.expires_at).toLocaleString()}</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="pt-4 flex gap-2">
+                                <Button
+                                    variant="outline"
+                                    className="flex-1"
+                                    onClick={() => copyToClipboard(`${window.location.origin}/pay/${detailsLink.short_code}`)}
+                                >
+                                    <Copy className="h-4 w-4 mr-2" />
+                                    Copy Link
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    className="flex-1"
+                                    asChild
+                                >
+                                    <Link href={`/dashboard/links/${detailsLink.short_code}`}>
+                                        <Eye className="h-4 w-4 mr-2" />
+                                        Full Details
+                                    </Link>
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
+
+            {/* Delete Confirmation Dialog */}
             <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
                 <AlertDialogContent className="bg-background border border-border text-foreground">
                     <AlertDialogHeader>
@@ -321,6 +398,7 @@ export function LinksTable({ links, showTabs = false }: LinksTableProps) {
                 </AlertDialogContent>
             </AlertDialog>
 
+            {/* QR Code Dialog */}
             <Dialog open={!!qrLink} onOpenChange={(open) => !open && setQrLink(null)}>
                 <DialogContent className="bg-background border-border text-foreground sm:max-w-md">
                     <DialogHeader>
