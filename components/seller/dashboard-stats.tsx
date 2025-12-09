@@ -322,7 +322,7 @@ export function DashboardStats({ links }: DashboardStatsProps) {
                                 </div>
                             </CardHeader>
                             <CardContent className="flex flex-col items-center justify-center h-[200px] md:h-[300px] relative p-2 md:p-6">
-                                <div className="w-full h-full absolute inset-0 flex items-center justify-center">
+                                <div className="w-full h-full absolute inset-0 flex items-center justify-center animate-in fade-in duration-700">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <RadialBarChart
                                             innerRadius="65%"
@@ -334,12 +334,12 @@ export function DashboardStats({ links }: DashboardStatsProps) {
                                         >
                                             <PolarAngleAxis type="number" domain={[0, 100]} angleAxisId={0} tick={false} />
                                             <RadialBar
-                                                background={{ fill: 'hsl(var(--muted))' }}
+                                                background={{ fill: 'hsl(var(--muted) / 0.3)' }}
                                                 dataKey="uv"
                                                 cornerRadius={30}
                                                 fill="#44f91f"
                                                 isAnimationActive={true}
-                                                animationBegin={0}
+                                                animationBegin={200}
                                                 animationDuration={1500}
                                                 animationEasing="ease-out"
                                             />
