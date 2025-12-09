@@ -262,7 +262,8 @@ export function LinksTable({ links, showTabs = false }: LinksTableProps) {
                                                     <QrCode className="h-4 w-4 mr-2" />
                                                     Show QR Code
                                                 </DropdownMenuItem>
-                                                {getWorkflowStage(link) !== 'delivered' && (
+                                                {/* CRITICAL: Cannot edit shipped or delivered items - unfair to buyers */}
+                                                {getWorkflowStage(link) !== 'delivered' && getWorkflowStage(link) !== 'on_transit' && (
                                                     <DropdownMenuItem asChild>
                                                         <Link href={`/dashboard/links/${link.short_code}/edit`}>
                                                             <Edit className="h-4 w-4 mr-2" />

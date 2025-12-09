@@ -32,8 +32,9 @@ export default async function EditLinkPage({ params }: PageProps) {
         redirect("/dashboard/links")
     }
 
-    // Prevent editing if order is already delivered
-    if (link.status === 'sold' && link.shipping_status === 'delivered') {
+    // CRITICAL: Prevent editing if order is shipped or delivered
+    // Once shipped, details cannot be changed as it's unfair to buyers
+    if (link.status === 'sold' && (link.shipping_status === 'shipped' || link.shipping_status === 'delivered')) {
         redirect(`/dashboard/links/${shortCode}`)
     }
 
