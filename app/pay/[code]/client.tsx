@@ -29,6 +29,13 @@ import { CometCard } from "@/components/ui/comet-card"
 import { useTheme } from "next-themes"
 import { ImageUploader } from "@/components/seller/image-uploader"
 import { MockPaymentFlow } from "@/components/buyer/mock-payment-flow"
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+} from "@/components/ui/dialog"
 
 interface PaymentPageClientProps {
     link: any
@@ -40,7 +47,7 @@ export default function PaymentPageClient({ link }: PaymentPageClientProps) {
     const { theme, setTheme } = useTheme()
     const [accessPin, setAccessPin] = useState("")
     const [isUnlocked, setIsUnlocked] = useState(false)
-    const [isProcessing, setIsProcessing] = useState(false)
+    const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
     const [error, setError] = useState("")
     const [selectedImage, setSelectedImage] = useState(0)
     const [buyerName, setBuyerName] = useState("")
@@ -83,8 +90,8 @@ export default function PaymentPageClient({ link }: PaymentPageClientProps) {
             toast.error("Please fill in all required fields")
             return
         }
-        // Show mock payment UI
-        setIsProcessing(true)
+        // Open payment modal
+        setIsPaymentModalOpen(true)
     }
 
     const handleConfirmDelivery = async () => {
@@ -411,58 +418,64 @@ export default function PaymentPageClient({ link }: PaymentPageClientProps) {
                                     </div>
                                 </div>
 
-                                {!isProcessing ? (
-                                    <>
-                                        <div className="space-y-4">
-                                            <div className="space-y-2">
-                                                <Label>Your Name</Label>
-                                                <Input
-                                                    placeholder="John Doe"
-                                                    value={buyerName}
-                                                    onChange={(e) => setBuyerName(e.target.value)}
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label>Email Address</Label>
-                                                <Input
-                                                    placeholder="john@example.com"
-                                                    type="email"
-                                                    value={buyerEmail}
-                                                    onChange={(e) => setBuyerEmail(e.target.value)}
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label>Phone Number (M-Pesa)</Label>
-                                                <Input
-                                                    placeholder="0712345678"
-                                                    type="tel"
-                                                    value={buyerPhone}
-                                                    onChange={(e) => setBuyerPhone(e.target.value)}
-                                                />
-                                            </div>
-                                        </div>
+                                <div className="space-y-4">
+                                    <div className="space-y-2">
+                                        <Label>Your Name</Label>
+                                        <Input
+                                            placeholder="John Doe"
+                                            value={buyerName}
+                                            onChange={(e) => setBuyerName(e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Email Address</Label>
+                                        <Input
+                                            placeholder="john@example.com"
+                                            type="email"
+                                            value={buyerEmail}
+                                            onChange={(e) => setBuyerEmail(e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Phone Number (M-Pesa)</Label>
+                                        <Input
+                                            placeholder="0712345678"
+                                            type="tel"
+                                            value={buyerPhone}
+                                            onChange={(e) => setBuyerPhone(e.target.value)}
+                                        />
+                                    </div>
+                                </div>
 
-                                        <Button
-                                            onClick={handlePayNow}
-                                            disabled={!buyerName || !buyerPhone || !buyerEmail}
-                                            className="w-full h-16 text-lg font-semibold rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_0_30px_-10px_var(--primary)] transition-all hover:scale-[1.01] active:scale-[0.99]"
-                                        >
-                                            Continue to Payment
-                                            <ArrowRight className="ml-2 h-5 w-5" />
-                                        </Button>
+                                <Button
+                                    onClick={handlePayNow}
+                                    disabled={!buyerName || !buyerPhone || !buyerEmail}
+                                    className="w-full h-16 text-lg font-semibold rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_0_30px_-10px_var(--primary)] transition-all hover:scale-[1.01] active:scale-[0.99]"
+                                >
+                                    Continue to Payment
+                                    <ArrowRight className="ml-2 h-5 w-5" />
+                                </Button>
 
-                                        <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                                            <Lock className="w-3 h-3" />
-                                            <span>Secure Mock Payment System</span>
-                                        </div>
-                                    </>
-                                ) : (
-                                    <MockPaymentFlow
-                                        link={link}
-                                        buyerPhone={buyerPhone}
-                                        buyerName={buyerName}
-                                    />
-                                )}
+                                <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                                    <Lock className="w-3 h-3" />
+                                    <span>Secure Mock Payment System</span>
+                                </div>
+
+                                <Dialog open={isPaymentModalOpen} onOpenChange={setIsPaymentModalOpen}>
+                                    <DialogContent className="sm:max-w-md">
+                                        <DialogHeader>
+                                            <DialogTitle>Complete Payment</DialogTitle>
+                                            <DialogDescription>
+                                                Choose your preferred payment method
+                                            </DialogDescription>
+                                        </DialogHeader>
+                                        <MockPaymentFlow
+                                            link={link}
+                                            buyerPhone={buyerPhone}
+                                            buyerName={buyerName}
+                                        />
+                                    </DialogContent>
+                                </Dialog>
                             </div>
                         ) : (
                             <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-700">

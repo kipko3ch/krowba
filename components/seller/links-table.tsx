@@ -76,7 +76,7 @@ export function LinksTable({ links, showTabs = false }: LinksTableProps) {
             return 'pending' // Active links not yet paid
         }
 
-        if (link.status === 'sold') {
+        if (link.status === 'sold' || link.status === 'paid') {
             if (link.shipping_status === 'delivered') return 'delivered'
             if (link.shipping_status === 'shipped') return 'on_transit'
             return 'awaiting_ship'
