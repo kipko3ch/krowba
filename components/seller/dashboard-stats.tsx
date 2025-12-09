@@ -233,13 +233,13 @@ export function DashboardStats({ links }: DashboardStatsProps) {
                                     <div className="flex items-center gap-2">
                                         <CardTitle className="text-sm md:text-base font-semibold text-foreground">Total Revenue</CardTitle>
                                         <TooltipProvider delayDuration={0}>
-                                            <Tooltip>
+                                            <Tooltip delayDuration={0}>
                                                 <TooltipTrigger asChild>
-                                                    <button className="touch-manipulation">
+                                                    <button className="touch-manipulation outline-none" type="button">
                                                         <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
                                                     </button>
                                                 </TooltipTrigger>
-                                                <TooltipContent side="top" className="max-w-[200px]">
+                                                <TooltipContent side="top" className="max-w-[200px] z-50" sideOffset={5}>
                                                     <p className="text-xs">Your total completed sales revenue</p>
                                                 </TooltipContent>
                                             </Tooltip>
@@ -308,13 +308,13 @@ export function DashboardStats({ links }: DashboardStatsProps) {
                                 <div className="flex items-center gap-2">
                                     <CardTitle className="text-sm md:text-base font-semibold text-foreground">Daily Performance</CardTitle>
                                     <TooltipProvider delayDuration={0}>
-                                        <Tooltip>
+                                        <Tooltip delayDuration={0}>
                                             <TooltipTrigger asChild>
-                                                <button className="touch-manipulation">
+                                                <button className="touch-manipulation outline-none" type="button">
                                                     <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
                                                 </button>
                                             </TooltipTrigger>
-                                            <TooltipContent side="top" className="max-w-[200px]">
+                                            <TooltipContent side="top" className="max-w-[200px] z-50" sideOffset={5}>
                                                 <p className="text-xs">Comparison of today&apos;s vs yesterday&apos;s sales</p>
                                             </TooltipContent>
                                         </Tooltip>
@@ -325,16 +325,16 @@ export function DashboardStats({ links }: DashboardStatsProps) {
                                 <div className="w-full h-full absolute inset-0 flex items-center justify-center">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <RadialBarChart
-                                            innerRadius="70%"
-                                            outerRadius="100%"
-                                            barSize={15}
+                                            innerRadius="65%"
+                                            outerRadius="95%"
+                                            barSize={20}
                                             data={radialData}
                                             startAngle={180}
                                             endAngle={0}
                                         >
                                             <PolarAngleAxis type="number" domain={[0, 100]} angleAxisId={0} tick={false} />
                                             <RadialBar
-                                                background
+                                                background={{ fill: 'hsl(var(--muted))' }}
                                                 dataKey="uv"
                                                 cornerRadius={30}
                                                 fill="#44f91f"

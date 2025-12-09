@@ -11,11 +11,10 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
-import { Loader2, LogOut, User, Building2, Phone, Mail, TrendingUp } from "lucide-react"
-import type { Seller } from "@/types"
+import { Loader2, LogOut, User, Building2, Phone, Mail } from "lucide-react"
 
 interface SettingsFormProps {
-  seller: Seller | null
+  seller: any
   userEmail: string
 }
 
@@ -143,48 +142,6 @@ export function SettingsForm({ seller, userEmail }: SettingsFormProps) {
               </Button>
             </div>
           </form>
-        </CardContent>
-      </Card>
-
-      {/* Account Statistics */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5" />
-            Account Statistics
-          </CardTitle>
-          <CardDescription>
-            Your performance and trust metrics
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="space-y-1">
-              <div className="text-sm text-muted-foreground">Total Transactions</div>
-              <div className="text-2xl font-bold">{seller?.total_transactions || 0}</div>
-            </div>
-            <div className="space-y-1">
-              <div className="text-sm text-muted-foreground">Successful</div>
-              <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                {seller?.successful_transactions || 0}
-              </div>
-            </div>
-            <div className="space-y-1">
-              <div className="text-sm text-muted-foreground">Success Rate</div>
-              <div className="text-2xl font-bold">
-                {seller && seller.total_transactions > 0
-                  ? Math.round((seller.successful_transactions / seller.total_transactions) * 100)
-                  : 100}
-                %
-              </div>
-            </div>
-            <div className="space-y-1">
-              <div className="text-sm text-muted-foreground">Trust Score</div>
-              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                {seller?.verification_score || 0}
-              </div>
-            </div>
-          </div>
         </CardContent>
       </Card>
 

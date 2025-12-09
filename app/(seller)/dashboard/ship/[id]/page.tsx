@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { FileUpload } from "@/components/ui/file-upload"
 import { toast } from "sonner"
-import { Loader2, Truck, CheckCircle2, AlertTriangle, ArrowLeft } from "lucide-react"
+import { Loader2, Truck, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 
 export default function ShipOrderPage({ params }: { params: Promise<{ id: string }> }) {
@@ -23,8 +23,6 @@ export default function ShipOrderPage({ params }: { params: Promise<{ id: string
     const [courier, setCourier] = useState("")
     const [trackingNumber, setTrackingNumber] = useState("")
     const [notes, setNotes] = useState("")
-    const [aiAnalysis, setAiAnalysis] = useState<any>(null)
-    const [isAnalyzing, setIsAnalyzing] = useState(false)
 
     useEffect(() => {
         const fetchLink = async () => {
@@ -49,7 +47,6 @@ export default function ShipOrderPage({ params }: { params: Promise<{ id: string
     const handleFileUpload = async (files: File[]) => {
         if (files.length === 0) return
 
-        setIsAnalyzing(true)
         const uploadedUrls: string[] = []
 
         try {
@@ -84,66 +81,11 @@ export default function ShipOrderPage({ params }: { params: Promise<{ id: string
             }
 
             setProofImages(prev => [...prev, ...uploadedUrls])
-            toast.success("Proof uploaded")
-
-            // Analyze the first image for verification
-            if (uploadedUrls.length > 0) {
-                await analyzeShippingProof(uploadedUrls[0])
-            }
+            toast.success("Proof uploaded successfully")
 
         } catch (error) {
             console.error("Upload error:", error)
             toast.error("Failed to upload proof")
-            setIsAnalyzing(false)
-        }
-    }
-
-    const analyzeShippingProof = async (imageUrl: string) => {
-        try {
-            const res = await fetch("/api/ai/verify-shipping", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ imageUrl })
-            })
-
-            const data = await res.json()
-
-            if (!res.ok || !data.success) {
-                throw new Error(data.error || "Verification failed")
-            }
-
-            const analysis = data.data
-
-            if (analysis.isValid && analysis.confidence >= 7) {
-                setAiAnalysis({
-                    isValid: true,
-                    description: analysis.reason,
-                    confidence: analysis.confidence
-                })
-
-                // Auto-fill details if found
-                if (analysis.extractedDetails?.courier) {
-                    setCourier(prev => prev || analysis.extractedDetails.courier)
-                }
-                if (analysis.extractedDetails?.trackingNumber) {
-                    setTrackingNumber(prev => prev || analysis.extractedDetails.trackingNumber)
-                }
-
-                toast.success("Shipping proof verified!")
-            } else {
-                setAiAnalysis({
-                    isValid: false,
-                    description: analysis.reason || "Image does not look like a valid shipping receipt.",
-                    confidence: analysis.confidence
-                })
-                toast.error("Invalid shipping proof detected")
-            }
-
-        } catch (error) {
-            console.error("Analysis error:", error)
-            toast.error("Could not verify image. Please ensure it's clear.")
-        } finally {
-            setIsAnalyzing(false)
         }
     }
 
@@ -238,10 +180,7 @@ export default function ShipOrderPage({ params }: { params: Promise<{ id: string
                                             variant="secondary"
                                             size="sm"
                                             className="absolute top-2 right-2"
-                                            onClick={() => {
-                                                setProofImages([])
-                                                setAiAnalysis(null)
-                                            }}
+                                            onClick={() => setProofImages([])}
                                         >
                                             Change
                                         </Button>
@@ -250,36 +189,6 @@ export default function ShipOrderPage({ params }: { params: Promise<{ id: string
                                     <FileUpload onChange={handleFileUpload} />
                                 )}
                             </div>
-
-                            {/* AI Verification Result */}
-                            {isAnalyzing && (
-                                <div className="flex items-center gap-2 text-sm text-muted-foreground animate-pulse">
-                                    <Loader2 className="h-4 w-4 animate-spin" /> Verifying proof...
-                                </div>
-                            )}
-
-                            {aiAnalysis && (
-                                <div className={`border rounded-lg p-3 flex items-start gap-3 ${aiAnalysis.isValid
-                                        ? "bg-green-500/10 border-green-500/20"
-                                        : "bg-red-500/10 border-red-500/20"
-                                    }`}>
-                                    {aiAnalysis.isValid ? (
-                                        <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5" />
-                                    ) : (
-                                        <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5" />
-                                    )}
-                                    <div>
-                                        <h4 className={`font-medium ${aiAnalysis.isValid ? "text-green-700" : "text-red-700"
-                                            }`}>
-                                            {aiAnalysis.isValid ? "Proof Verified" : "Verification Failed"}
-                                        </h4>
-                                        <p className={`text-sm ${aiAnalysis.isValid ? "text-green-600/90" : "text-red-600/90"
-                                            }`}>
-                                            {aiAnalysis.description}
-                                        </p>
-                                    </div>
-                                </div>
-                            )}
                         </CardContent>
                     </Card>
 
