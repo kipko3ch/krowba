@@ -5,6 +5,9 @@ export type PaymentType = "deposit" | "full" | "balance"
 export type PaymentStatus = "pending" | "completed" | "failed" | "refunded"
 export type EscrowStatus = "held" | "released" | "refunded" | "disputed"
 export type LinkStatus = "active" | "paid" | "completed" | "cancelled" | "disputed" | "sold"
+export type AIVerificationStatus = "pending" | "passed" | "warning" | "failed"
+export type DisputeResolution = "buyer_favor" | "seller_favor" | "partial_refund" | "no_resolution"
+
 
 export interface KrowbaLink {
   id: string
@@ -164,4 +167,67 @@ export interface CreateLinkFormData {
   deposit_amount?: number
   images: string[]
   description?: string
+}
+
+// Mock Payment System Types
+export type PaymentMethod = "card" | "mobile"
+export type WalletBalanceType = "pending" | "available" | "refunded" | "paid"
+export type MockPaymentStatus = "initiated" | "processing" | "completed" | "failed"
+export type RefundType = "partial" | "full"
+export type MockWebhookStatus = "pending" | "processing" | "needs-attention" | "processed" | "failed"
+
+export interface MockTransaction {
+  id: string
+  transaction_reference: string
+  amount: number
+  currency: string
+  status: MockPaymentStatus
+  payment_method: PaymentMethod
+  message: string
+  created_at: string
+  updated_at: string
+}
+
+export interface VirtualWallet {
+  pending: number
+  available: number
+  refunded: number
+  paid: number
+}
+
+export interface WalletTransaction {
+  id: string
+  reference: string
+  amount: number
+  type: WalletBalanceType
+  status: string
+  payment_method: PaymentMethod
+  created_at: string
+}
+
+export interface MockPaymentRequest {
+  payment_method: PaymentMethod
+  amount: number
+  krowba_link_id: string
+  buyer_phone: string
+  buyer_name?: string
+  card_number?: string // For card payments
+  card_expiry?: string // For card payments
+  card_cvv?: string // For card payments
+}
+
+export interface MockPaymentResponse {
+  success: boolean
+  reference: string
+  status: MockPaymentStatus
+  message: string
+  transaction_id?: string
+}
+
+export interface RefundRequest {
+  transaction_id: string
+  type: RefundType
+  amount?: number // Required for partial refunds
+  reason: string
+  initiated_by: "buyer" | "seller" | "system"
 }
