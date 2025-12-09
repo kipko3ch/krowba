@@ -147,12 +147,9 @@ export function DashboardStats({ links }: DashboardStatsProps) {
                         <div className="grid grid-cols-2 gap-4 md:contents">
                             {/* CARD 1: ACTIVE LINKS */}
                             <Card className="relative overflow-hidden bg-gradient-to-br from-card to-card/50 border-border shadow-sm hover:shadow-md transition-all duration-300 hover:scale-[1.02]">
-                                {/* Creative Watermark */}
-                                <div className="absolute -right-8 -top-8 opacity-[0.03] dark:opacity-[0.05]">
-                                    <LinkIcon className="h-32 w-32 text-[#44f91f] rotate-12" />
-                                </div>
-                                <div className="absolute -right-4 bottom-0 opacity-[0.02] dark:opacity-[0.03]">
-                                    <div className="text-[120px] font-bold text-[#44f91f]">{activeLinks.length}</div>
+                                {/* Simplified Watermark */}
+                                <div className="absolute -right-6 top-1/2 -translate-y-1/2 opacity-[0.015] dark:opacity-[0.025] pointer-events-none">
+                                    <LinkIcon className="h-40 w-40 text-[#44f91f] rotate-12" />
                                 </div>
 
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4 md:p-6 relative z-10">
@@ -176,12 +173,9 @@ export function DashboardStats({ links }: DashboardStatsProps) {
 
                             {/* CARD 2: POTENTIAL VALUE */}
                             <Card className="relative overflow-hidden bg-gradient-to-br from-card to-card/50 border-border shadow-sm hover:shadow-md transition-all duration-300 hover:scale-[1.02]">
-                                {/* Creative Watermark */}
-                                <div className="absolute -right-8 -top-8 opacity-[0.03] dark:opacity-[0.05]">
-                                    <DollarSign className="h-32 w-32 text-yellow-500 rotate-12" />
-                                </div>
-                                <div className="absolute left-0 bottom-0 opacity-[0.02] dark:opacity-[0.03]">
-                                    <div className="text-[80px] font-bold text-yellow-500 -rotate-12">KSH</div>
+                                {/* Simplified Watermark */}
+                                <div className="absolute -left-6 bottom-1/4 opacity-[0.015] dark:opacity-[0.025] pointer-events-none">
+                                    <DollarSign className="h-40 w-40 text-yellow-500 -rotate-12" />
                                 </div>
 
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4 md:p-6 relative z-10">
@@ -206,12 +200,9 @@ export function DashboardStats({ links }: DashboardStatsProps) {
 
                         {/* CARD 3: COMPLETED SALES - Full width on mobile */}
                         <Card className="relative overflow-hidden bg-gradient-to-br from-card to-card/50 border-border shadow-sm hover:shadow-md transition-all duration-300 hover:scale-[1.02] md:col-span-1">
-                            {/* Creative Watermark */}
-                            <div className="absolute -right-8 -top-8 opacity-[0.03] dark:opacity-[0.05]">
-                                <Package className="h-32 w-32 text-pink-500 rotate-12" />
-                            </div>
-                            <div className="absolute left-0 -bottom-4 opacity-[0.02] dark:opacity-[0.03]">
-                                <div className="text-[100px] font-bold text-pink-500">{completedLinks.length}</div>
+                            {/* Simplified Watermark */}
+                            <div className="absolute right-0 top-1/2 -translate-y-1/2 opacity-[0.015] dark:opacity-[0.025] pointer-events-none">
+                                <Package className="h-40 w-40 text-pink-500 rotate-12" />
                             </div>
 
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4 md:p-6 relative z-10">
