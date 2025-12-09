@@ -21,57 +21,77 @@ export async function POST(request: NextRequest) {
       tracking_number,
       dispatch_images,
       dispatch_video,
-      original_product_image,
     } = body
 
-    if (!transaction_id || !krowba_link_id || !courier_name || !dispatch_images?.length) {
+    if (!transaction_id || !krowba_link_id) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
-    // Verify the transaction belongs to this seller
-    const { data: transaction, error: txError } = await supabase
-      .from("transactions")
-      .select("id, seller_id, status")
-      .eq("id", transaction_id)
-      .single()
-
-    if (txError || !transaction || transaction.seller_id !== user.id) {
-      return NextResponse.json({ error: "Transaction not found" }, { status: 404 })
+    if (!dispatch_images || dispatch_images.length === 0) {
+      return NextResponse.json({ error: "Please upload at least one dispatch proof image" }, { status: 400 })
     }
 
-    // Create shipping proof
-    const { data: shippingProof, error: proofError } = await supabase
+    console.log(`[Dispatch Proof] Uploading shipping proof for transaction ${transaction_id}`)
+
+    // Create shipping proof record
+    const { data: proof, error: proofError } = await supabase
       .from("shipping_proofs")
       .insert({
-        transaction_id,
         krowba_link_id,
-        seller_id: user.id,
+        transaction_id,
         courier_name,
-        courier_contact: courier_contact || null,
-        tracking_number: tracking_number || null,
+        courier_contact,
+        tracking_number,
         dispatch_images,
-        dispatch_video: dispatch_video || null,
-        dispatched_at: new Date().toISOString(),
+        dispatch_video,
       })
       .select()
       .single()
 
     if (proofError) {
-      console.error("[Shipping] Error creating proof:", proofError)
-      return NextResponse.json({ error: "Failed to create shipping proof" }, { status: 500 })
+      console.error("[Dispatch Proof] Failed to create shipping proof:", proofError)
+      return NextResponse.json({ error: "Failed to save shipping proof" }, { status: 500 })
+    }
+
+    // Update link with shipping details
+    const { error: linkError } = await supabase
+      .from("krowba_links")
+      .update({
+        shipping_status: "shipped",
+        shipping_courier: courier_name,
+        tracking_number: tracking_number || null,
+        shipping_proof_url: dispatch_images[0],
+        dispatch_video_url: dispatch_video || null,
+      })
+      .eq("id", krowba_link_id)
+
+    if (linkError) {
+      console.error("[Dispatch Proof] Failed to update link:", linkError)
     }
 
     // Update transaction status to shipped
-    await supabase.from("transactions").update({ status: "shipped" }).eq("id", transaction_id)
+    const { error: txError } = await supabase
+      .from("transactions")
+      .update({
+        status: "shipped",
+      })
+      .eq("id", transaction_id)
+
+    if (txError) {
+      console.error("[Dispatch Proof] Failed to update transaction:", txError)
+    }
+
+    console.log(`[Dispatch Proof] Shipping proof ${proof.id} saved successfully`)
 
     return NextResponse.json({
       success: true,
-      data: shippingProof,
+      data: {
+        proof_id: proof.id,
+        message: "Shipping proof submitted successfully",
+      },
     })
-  } catch (error) {
-    console.error("[Shipping] Error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+  } catch (error: any) {
+    console.error("[Dispatch Proof] Error:", error)
+    return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 })
   }
 }
-
-
