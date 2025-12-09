@@ -232,12 +232,14 @@ export function DashboardStats({ links }: DashboardStatsProps) {
                                 <div className="space-y-1">
                                     <div className="flex items-center gap-2">
                                         <CardTitle className="text-sm md:text-base font-semibold text-foreground">Total Revenue</CardTitle>
-                                        <TooltipProvider>
+                                        <TooltipProvider delayDuration={0}>
                                             <Tooltip>
                                                 <TooltipTrigger asChild>
-                                                    <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
+                                                    <button className="touch-manipulation">
+                                                        <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
+                                                    </button>
                                                 </TooltipTrigger>
-                                                <TooltipContent>
+                                                <TooltipContent side="top" className="max-w-[200px]">
                                                     <p className="text-xs">Your total completed sales revenue</p>
                                                 </TooltipContent>
                                             </Tooltip>
@@ -305,13 +307,15 @@ export function DashboardStats({ links }: DashboardStatsProps) {
                             <CardHeader className="pb-2 p-4 md:p-6">
                                 <div className="flex items-center gap-2">
                                     <CardTitle className="text-sm md:text-base font-semibold text-foreground">Daily Performance</CardTitle>
-                                    <TooltipProvider>
+                                    <TooltipProvider delayDuration={0}>
                                         <Tooltip>
                                             <TooltipTrigger asChild>
-                                                <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
+                                                <button className="touch-manipulation">
+                                                    <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
+                                                </button>
                                             </TooltipTrigger>
-                                            <TooltipContent>
-                                                <p className="text-xs">Comparison of today's vs yesterday's sales</p>
+                                            <TooltipContent side="top" className="max-w-[200px]">
+                                                <p className="text-xs">Comparison of today&apos;s vs yesterday&apos;s sales</p>
                                             </TooltipContent>
                                         </Tooltip>
                                     </TooltipProvider>
@@ -334,6 +338,10 @@ export function DashboardStats({ links }: DashboardStatsProps) {
                                                 dataKey="uv"
                                                 cornerRadius={30}
                                                 fill="#44f91f"
+                                                isAnimationActive={true}
+                                                animationBegin={0}
+                                                animationDuration={1500}
+                                                animationEasing="ease-out"
                                             />
                                         </RadialBarChart>
                                     </ResponsiveContainer>
