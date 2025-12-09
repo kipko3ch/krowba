@@ -23,15 +23,7 @@ export default async function LinksPage() {
       transactions(
         id,
         status,
-        refund_status,
-        refund_reason,
-        refunded_at,
-        delivery_evidence(
-          id,
-          description,
-          evidence_photos,
-          created_at
-        )
+        refund_status
       )
     `)
     .eq("seller_id", user.id)
