@@ -28,14 +28,6 @@ import { cn } from "@/lib/utils"
 import { CometCard } from "@/components/ui/comet-card"
 import { useTheme } from "next-themes"
 import { ImageUploader } from "@/components/seller/image-uploader"
-import { MockPaymentFlow } from "@/components/buyer/mock-payment-flow"
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogDescription,
-} from "@/components/ui/dialog"
 
 interface PaymentPageClientProps {
     link: any
@@ -47,7 +39,7 @@ export default function PaymentPageClient({ link }: PaymentPageClientProps) {
     const { theme, setTheme } = useTheme()
     const [accessPin, setAccessPin] = useState("")
     const [isUnlocked, setIsUnlocked] = useState(false)
-    const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
+    const [isProcessing, setIsProcessing] = useState(false)
     const [error, setError] = useState("")
     const [selectedImage, setSelectedImage] = useState(0)
     const [buyerName, setBuyerName] = useState("")
@@ -85,13 +77,33 @@ export default function PaymentPageClient({ link }: PaymentPageClientProps) {
         }
     }
 
-    const handlePayNow = () => {
-        if (!buyerName || !buyerPhone || !buyerEmail) {
-            toast.error("Please fill in all required fields")
-            return
+    const handlePayNow = async () => {
+        setIsProcessing(true)
+        try {
+            const response = await fetch("/api/buyer/pay", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    link_id: link.id,
+                    amount: link.item_price + link.delivery_fee,
+                    buyer_email: buyerEmail,
+                    buyer_name: buyerName,
+                    buyer_phone: buyerPhone,
+                    payment_type: "one_time"
+                }),
+            })
+
+            const data = await response.json()
+
+            if (!response.ok) throw new Error(data.error || "Payment initiation failed")
+
+            // Redirect to Paystack
+            window.location.href = data.data.authorization_url
+        } catch (error) {
+            console.error("Payment error:", error)
+            toast.error("Failed to initiate payment. Please try again.")
+            setIsProcessing(false)
         }
-        // Open payment modal
-        setIsPaymentModalOpen(true)
     }
 
     const handleConfirmDelivery = async () => {
@@ -449,33 +461,26 @@ export default function PaymentPageClient({ link }: PaymentPageClientProps) {
 
                                 <Button
                                     onClick={handlePayNow}
-                                    disabled={!buyerName || !buyerPhone || !buyerEmail}
+                                    disabled={isProcessing || !buyerName || !buyerPhone || !buyerEmail}
                                     className="w-full h-16 text-lg font-semibold rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_0_30px_-10px_var(--primary)] transition-all hover:scale-[1.01] active:scale-[0.99]"
                                 >
-                                    Continue to Payment
-                                    <ArrowRight className="ml-2 h-5 w-5" />
+                                    {isProcessing ? (
+                                        <>
+                                            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                                            Redirecting to Paystack...
+                                        </>
+                                    ) : (
+                                        <>
+                                            Pay Securely
+                                            <ArrowRight className="ml-2 h-5 w-5" />
+                                        </>
+                                    )}
                                 </Button>
 
                                 <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
                                     <Lock className="w-3 h-3" />
-                                    <span>Secure Mock Payment System</span>
+                                    <span>256-bit SSL Encrypted Payment via Paystack</span>
                                 </div>
-
-                                <Dialog open={isPaymentModalOpen} onOpenChange={setIsPaymentModalOpen}>
-                                    <DialogContent className="sm:max-w-md">
-                                        <DialogHeader>
-                                            <DialogTitle>Complete Payment</DialogTitle>
-                                            <DialogDescription>
-                                                Choose your preferred payment method
-                                            </DialogDescription>
-                                        </DialogHeader>
-                                        <MockPaymentFlow
-                                            link={link}
-                                            buyerPhone={buyerPhone}
-                                            buyerName={buyerName}
-                                        />
-                                    </DialogContent>
-                                </Dialog>
                             </div>
                         ) : (
                             <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-700">

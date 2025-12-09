@@ -89,8 +89,7 @@ export function LinkDetails({ link, transactions, escrowHolds, shippingProofs, r
                         <QrCode className="h-4 w-4 mr-2" />
                         QR Code
                     </Button>
-                    {/* CRITICAL: Cannot edit shipped or delivered items - buyer protection */}
-                    {!(link.status === 'sold' && (link.shipping_status === 'shipped' || link.shipping_status === 'delivered')) && (
+                    {!(link.status === 'sold' && link.shipping_status === 'delivered') && (
                         <Link href={`/dashboard/links/${link.short_code}/edit`}>
                             <Button variant="outline" size="sm" className="border-gray-700 text-gray-300 hover:bg-gray-800">
                                 <Edit className="h-4 w-4 mr-2" />
