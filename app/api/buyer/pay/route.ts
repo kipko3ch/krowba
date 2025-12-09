@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
-import { paystack } from "@/lib/services/paystack"
 
 // Lazy initialization to avoid build-time errors
 const getSupabaseAdmin = () => createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
@@ -8,7 +7,7 @@ const getSupabaseAdmin = () => createClient(process.env.NEXT_PUBLIC_SUPABASE_URL
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { link_id, buyer_name, buyer_phone, buyer_email, amount, payment_type } = body
+    const { link_id, buyer_name, buyer_phone, buyer_email, amount, payment_method, card_number, card_expiry, card_cvv } = body
 
     if (!link_id || !buyer_email || !amount) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
@@ -31,71 +30,42 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "This link is no longer active" }, { status: 400 })
     }
 
-    // Generate unique reference
-    const paystackReference = `KRW_${link.short_code}_${Date.now()}`
-
-    // Create transaction record FIRST
-    const { data: transaction, error: txError } = await supabase
-      .from("transactions")
-      .insert({
+    // Use MOCK payment system instead of Paystack
+    const mockPaymentResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/mock/payments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        payment_method: payment_method || "card",
+        amount,
         krowba_link_id: link_id,
         seller_id: link.seller_id,
-        buyer_phone: buyer_phone ? paystack.formatPhoneNumber(buyer_phone) : null,
-        buyer_name: buyer_name || null,
-        amount,
-        payment_type,
-        payment_method: "paystack",
-        payment_reference: paystackReference,
-        paystack_reference: paystackReference,
-        status: "pending",
-      })
-      .select()
-      .single()
-
-    if (txError) {
-      console.error("[Pay] Transaction creation error:", txError)
-      return NextResponse.json({
-        error: `Failed to create transaction: ${txError.message || JSON.stringify(txError)}`,
-        details: txError
-      }, { status: 500 })
-    }
-
-    // Callback URL after payment
-    const callbackUrl = `${process.env.NEXT_PUBLIC_APP_URL}/payment/callback?ref=${paystackReference}`
-
-    // Initialize Paystack payment
-    const paystackResult = await paystack.initializePayment({
-      amount: amount * 100, // Convert to Kobo (cents)
-      email: buyer_email,
-      reference: paystackReference,
-      callback_url: callbackUrl,
-      metadata: {
-        seller_id: link.seller_id,
-        buyer_id: buyer_phone || buyer_email,
-        item_id: link.id,
-        krowba_transaction_id: transaction.id,
-        payment_type: payment_type,
-        item_name: link.item_name,
-      },
-      channels: ["card", "bank", "ussd", "mobile_money", "bank_transfer"],
+        buyer_phone,
+        buyer_name,
+        buyer_email,
+        card_number,
+        card_expiry,
+        card_cvv,
+      }),
     })
 
-    if (!paystackResult.success || !paystackResult.data) {
-      // Update transaction status to failed
-      await supabase.from("transactions").update({ status: "failed" }).eq("id", transaction.id)
+    const mockPaymentData = await mockPaymentResponse.json()
 
+    if (!mockPaymentData.success) {
       return NextResponse.json({
-        error: paystackResult.error || "Payment initiation failed"
-      }, { status: 500 })
+        success: false,
+        error: mockPaymentData.message || "Payment failed",
+      }, { status: 400 })
     }
 
+    // Mock payment succeeded - return success with transaction details
     return NextResponse.json({
       success: true,
       data: {
-        transaction_id: transaction.id,
-        reference: paystackResult.data.reference,
-        authorization_url: paystackResult.data.authorization_url,
-        access_code: paystackResult.data.access_code,
+        transaction_id: mockPaymentData.transaction_id,
+        reference: mockPaymentData.reference,
+        status: mockPaymentData.status,
+        message: mockPaymentData.message,
+        // No authorization_url needed for mock payments
       },
     })
   } catch (error) {

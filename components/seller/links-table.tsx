@@ -49,6 +49,7 @@ interface LinksTableProps {
 
 const WORKFLOW_FILTERS = [
     { label: "All Orders", value: "all", color: "text-foreground" },
+    { label: "Pending", value: "pending", color: "text-gray-500" },
     { label: "Awaiting Ship", value: "awaiting_ship", color: "text-blue-500" },
     { label: "On Transit", value: "on_transit", color: "text-yellow-500" },
     { label: "Delivered", value: "delivered", color: "text-[#44f91f]" },
@@ -69,11 +70,19 @@ export function LinksTable({ links, showTabs = false }: LinksTableProps) {
             tx.refund_status && tx.refund_status !== 'none'
         )
 
-        if (hasRefund) return "rejected"
-        if (link.status !== 'sold' && link.status !== 'paid') return null // Not paid yet
-        if (link.shipping_status === 'delivered') return "delivered"
-        if (link.shipping_status === 'shipped') return "on_transit"
-        return "awaiting_ship" // Paid but not shipped
+        if (hasRefund) return 'rejected'
+
+        if (!['sold', 'paid'].includes(link.status)) {
+            return 'pending' // Active links not yet paid
+        }
+
+        if (link.status === 'sold') {
+            if (link.shipping_status === 'delivered') return 'delivered'
+            if (link.shipping_status === 'shipped') return 'on_transit'
+            return 'awaiting_ship'
+        }
+
+        return 'pending'
     }
 
     // Filter links by workflow stage
