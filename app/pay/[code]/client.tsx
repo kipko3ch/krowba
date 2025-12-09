@@ -28,6 +28,7 @@ import { cn } from "@/lib/utils"
 import { CometCard } from "@/components/ui/comet-card"
 import { useTheme } from "next-themes"
 import { ImageUploader } from "@/components/seller/image-uploader"
+import { MockPaymentFlow } from "@/components/buyer/mock-payment-flow"
 
 interface PaymentPageClientProps {
     link: any
@@ -77,33 +78,13 @@ export default function PaymentPageClient({ link }: PaymentPageClientProps) {
         }
     }
 
-    const handlePayNow = async () => {
-        setIsProcessing(true)
-        try {
-            const response = await fetch("/api/buyer/pay", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    link_id: link.id,
-                    amount: link.item_price + link.delivery_fee,
-                    buyer_email: buyerEmail,
-                    buyer_name: buyerName,
-                    buyer_phone: buyerPhone,
-                    payment_type: "one_time"
-                }),
-            })
-
-            const data = await response.json()
-
-            if (!response.ok) throw new Error(data.error || "Payment initiation failed")
-
-            // Redirect to Paystack
-            window.location.href = data.data.authorization_url
-        } catch (error) {
-            console.error("Payment error:", error)
-            toast.error("Failed to initiate payment. Please try again.")
-            setIsProcessing(false)
+    const handlePayNow = () => {
+        if (!buyerName || !buyerPhone || !buyerEmail) {
+            toast.error("Please fill in all required fields")
+            return
         }
+        // Show mock payment UI
+        setIsProcessing(true)
     }
 
     const handleConfirmDelivery = async () => {
@@ -430,57 +411,58 @@ export default function PaymentPageClient({ link }: PaymentPageClientProps) {
                                     </div>
                                 </div>
 
-                                <div className="space-y-4">
-                                    <div className="space-y-2">
-                                        <Label>Your Name</Label>
-                                        <Input
-                                            placeholder="John Doe"
-                                            value={buyerName}
-                                            onChange={(e) => setBuyerName(e.target.value)}
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Email Address</Label>
-                                        <Input
-                                            placeholder="john@example.com"
-                                            type="email"
-                                            value={buyerEmail}
-                                            onChange={(e) => setBuyerEmail(e.target.value)}
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Phone Number (M-Pesa)</Label>
-                                        <Input
-                                            placeholder="0712345678"
-                                            type="tel"
-                                            value={buyerPhone}
-                                            onChange={(e) => setBuyerPhone(e.target.value)}
-                                        />
-                                    </div>
-                                </div>
+                                {!isProcessing ? (
+                                    <>
+                                        <div className="space-y-4">
+                                            <div className="space-y-2">
+                                                <Label>Your Name</Label>
+                                                <Input
+                                                    placeholder="John Doe"
+                                                    value={buyerName}
+                                                    onChange={(e) => setBuyerName(e.target.value)}
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label>Email Address</Label>
+                                                <Input
+                                                    placeholder="john@example.com"
+                                                    type="email"
+                                                    value={buyerEmail}
+                                                    onChange={(e) => setBuyerEmail(e.target.value)}
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label>Phone Number (M-Pesa)</Label>
+                                                <Input
+                                                    placeholder="0712345678"
+                                                    type="tel"
+                                                    value={buyerPhone}
+                                                    onChange={(e) => setBuyerPhone(e.target.value)}
+                                                />
+                                            </div>
+                                        </div>
 
-                                <Button
-                                    onClick={handlePayNow}
-                                    disabled={isProcessing || !buyerName || !buyerPhone || !buyerEmail}
-                                    className="w-full h-16 text-lg font-semibold rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_0_30px_-10px_var(--primary)] transition-all hover:scale-[1.01] active:scale-[0.99]"
-                                >
-                                    {isProcessing ? (
-                                        <>
-                                            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                                            Redirecting to Paystack...
-                                        </>
-                                    ) : (
-                                        <>
-                                            Pay Securely
+                                        <Button
+                                            onClick={handlePayNow}
+                                            disabled={!buyerName || !buyerPhone || !buyerEmail}
+                                            className="w-full h-16 text-lg font-semibold rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_0_30px_-10px_var(--primary)] transition-all hover:scale-[1.01] active:scale-[0.99]"
+                                        >
+                                            Continue to Payment
                                             <ArrowRight className="ml-2 h-5 w-5" />
-                                        </>
-                                    )}
-                                </Button>
+                                        </Button>
 
-                                <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                                    <Lock className="w-3 h-3" />
-                                    <span>256-bit SSL Encrypted Payment via Paystack</span>
-                                </div>
+                                        <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                                            <Lock className="w-3 h-3" />
+                                            <span>Secure Mock Payment System</span>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <MockPaymentFlow
+                                        link={link}
+                                        buyerPhone={buyerPhone}
+                                        buyerName={buyerName}
+                                    />
+                                )}
                             </div>
                         ) : (
                             <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-700">
